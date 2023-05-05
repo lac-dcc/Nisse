@@ -2,4 +2,4 @@
 [~] Instrumentation Pass
 [ ] Readme
 [ ] Copyright/License checks
-[ ] Push on github
+[x] Push on github

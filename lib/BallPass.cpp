@@ -46,18 +46,18 @@ bool BallPass::inST(BlockPtr BB1, BlockPtr BB2) {
 }
 
 void BallPass::addToReverse(BlockPtr BB1, BlockPtr BB2) {
-  if (!this->inST(BB1, BB2))
+  if (this->inST(BB1, BB2))
     return;
-  for (BlockPtr BB : successors(BB1)) {
-    if (BB == BB2) {
-      this->reverseSTEdges.insert(PairBlock(BB1, BB2));
-      return;
-    }
+  if (BB1->getSingleSuccessor() == BB2 || BB2->getSinglePredecessor() == BB1) {
+    this->reverseSTEdges.insert(PairBlock(BB1, BB2));
+    return;
   }
-  this->reverseSTEdges.insert(PairBlock(BB2, BB1));
+  if (BB1->getSinglePredecessor() == BB2 || BB2->getSingleSuccessor() == BB1) {
+    this->reverseSTEdges.insert(PairBlock(BB2, BB1));
+  }
 }
 
-AllocaInst *BallPass::insertEntryFn(Function &F, Module &M) {
+Value *BallPass::insertEntryFn(Function &F, Module &M) {
   auto *I = IntegerType::getInt32Ty(M.getContext());
   auto num = this->reverseSTEdges.size();
   ArrayType *arrayType = ArrayType::get(I, num);
@@ -65,20 +65,22 @@ AllocaInst *BallPass::insertEntryFn(Function &F, Module &M) {
   //     dyn_cast<Instruction>(F.getEntryBlock().getFirstInsertionPt());
   IRBuilder<> builder(&F.getEntryBlock(), F.getEntryBlock().begin());
   auto inst = builder.CreateAlloca(arrayType, nullptr, "counter-array");
-  auto zero = Constant::getNullValue(I);
-  builder.CreateMemSet(inst, zero, num, inst->getAlign());
+  Value *indexList[] = {ConstantInt::get(I, 0)};
+  auto cast = builder.CreateGEP(I, inst, indexList);
+  auto zero = ConstantInt::get(IntegerType::getInt8Ty(M.getContext()), 0);
+  builder.CreateMemSet(cast, zero, num*4, inst->getAlign());
   return inst;
 }
 
-void BallPass::insertIncrFn(BlockPtr BB1, BlockPtr BB2, int i,
-                            AllocaInst *inst) {
+void BallPass::insertIncrFn(Module &M, BlockPtr BB1, BlockPtr BB2, int i,
+                            Value *inst) {
   Instruction *target;
   if (BB1->getUniqueSuccessor()) {
     target = BB1->getTerminator();
   } else {
     target = &*BB2->getFirstInsertionPt();
   }
-  auto I = inst->getType();
+  auto *I = IntegerType::getInt32Ty(M.getContext());
   IRBuilder<> builder(target);
   Value *indexList[1] = {ConstantInt::get(I, i)};
   Value *one = ConstantInt::get(I, 1);
@@ -88,17 +90,18 @@ void BallPass::insertIncrFn(BlockPtr BB1, BlockPtr BB2, int i,
   builder.CreateStore(inst3, inst1);
 }
 
-void BallPass::insertExitFn(BlockPtr BB, llvm::Function &F, llvm::Module &M, llvm::AllocaInst *inst) {
+void BallPass::insertExitFn(BlockPtr BB, llvm::Function &F, llvm::Module &M,
+                            llvm::Value *inst) {
   auto insertion_point = BB->getTerminator();
 
-  llvm::LLVMContext& context = insertion_point->getContext();
+  llvm::LLVMContext &context = insertion_point->getContext();
 
   IRBuilder<> builder(insertion_point);
 
-  llvm::Type* r_type = llvm::FunctionType::getVoidTy(context);
+  llvm::Type *r_type = llvm::FunctionType::getVoidTy(context);
 
-  llvm::SmallVector<llvm::Type*, 3> a_types;
-  llvm::SmallVector<llvm::Value*, 3> a_vals;
+  llvm::SmallVector<llvm::Type *, 3> a_types;
+  llvm::SmallVector<llvm::Value *, 3> a_vals;
 
   a_types.push_back(builder.getInt8PtrTy());
   llvm::StringRef function_name = insertion_point->getFunction()->getName();
@@ -110,8 +113,8 @@ void BallPass::insertExitFn(BlockPtr BB, llvm::Function &F, llvm::Module &M, llv
   a_types.push_back(builder.getInt32Ty());
   a_vals.push_back(builder.getInt32(this->reverseSTEdges.size()));
 
-  llvm::FunctionType* f_type = llvm::FunctionType::get(r_type, a_types, false);
-  llvm::Module* mod = insertion_point->getFunction()->getParent();
+  llvm::FunctionType *f_type = llvm::FunctionType::get(r_type, a_types, false);
+  llvm::Module *mod = insertion_point->getFunction()->getParent();
   llvm::FunctionCallee f_call = mod->getOrInsertFunction("print_data", f_type);
   builder.CreateCall(f_call, a_vals);
 }
@@ -128,10 +131,11 @@ PreservedAnalyses BallPass::run(Function &F, FunctionAnalysisManager &FAM) {
   }
 
   auto inst = this->insertEntryFn(F, *F.getParent());
+  this->insertExitFn(&F.getEntryBlock(), F, *F.getParent(), inst);
 
   int i = 0;
   for (auto p : this->reverseSTEdges) {
-    this->insertIncrFn(p.first, p.second, i++, inst);
+    this->insertIncrFn(*F.getParent(), p.first, p.second, i++, inst);
   }
 
   for (BasicBlock &BB : F) {

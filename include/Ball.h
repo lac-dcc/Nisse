@@ -57,13 +57,12 @@ private:
   void addToReverse(BlockPtr BB1, BlockPtr BB2);
   bool inST(BlockPtr BB1, BlockPtr BB2);
 
-  llvm::AllocaInst *insertEntryFn(llvm::Function &F, llvm::Module &M);
-  void insertIncrFn(BlockPtr BB1, BlockPtr BB2, int i, llvm::AllocaInst *inst);
+  llvm::Value *insertEntryFn(llvm::Function &F, llvm::Module &M);
+  void insertIncrFn(llvm::Module &M, BlockPtr BB1, BlockPtr BB2, int i, llvm::Value *inst);
   void insertExitFn(BlockPtr BB, llvm::Function &F, llvm::Module &M,
-                    llvm::AllocaInst *inst);
+                    llvm::Value *inst);
 
 public:
-  BallPass();
   llvm::PreservedAnalyses run(llvm::Function &F,
                               llvm::FunctionAnalysisManager &FAM);
 };

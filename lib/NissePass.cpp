@@ -1,5 +1,5 @@
-//===-- BallPass.cpp --------------------------------------------------===//
-// Copyright (C) 2020  Luigi D. C. Soares, Augusto Dias Noronha
+//===-- NissePass.cpp --------------------------------------------------===//
+// Copyright (C) 2023 Leon Frenot
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,11 +16,11 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the implementation of the BallPass
+/// This file contains the implementation of the NissePass
 ///
 //===----------------------------------------------------------------------===//
 
-#include "Ball.h"
+#include "Nisse.h"
 #include "llvm-c/Core.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -31,33 +31,18 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/Value.h"
 
 #include <set>
 #include <utility>
+#include <iostream>
 
 using namespace llvm;
 using namespace std;
 
-namespace ball {
+namespace nisse {
 
-bool BallPass::inST(BlockPtr BB1, BlockPtr BB2) {
-  PairBlock tmp = {BB1, BB2};
-  return this->STEdges.count(tmp) == 1;
-}
-
-void BallPass::addToReverse(BlockPtr BB1, BlockPtr BB2) {
-  if (this->inST(BB1, BB2))
-    return;
-  if (BB1->getSingleSuccessor() == BB2 || BB2->getSinglePredecessor() == BB1) {
-    this->reverseSTEdges.insert(PairBlock(BB1, BB2));
-    return;
-  }
-  if (BB1->getSinglePredecessor() == BB2 || BB2->getSingleSuccessor() == BB1) {
-    this->reverseSTEdges.insert(PairBlock(BB2, BB1));
-  }
-}
-
-Value *BallPass::insertEntryFn(Function &F, Module &M) {
+Value *NissePass::insertEntryFn(Function &F, Module &M) {
   auto *I = IntegerType::getInt32Ty(M.getContext());
   auto num = this->reverseSTEdges.size();
   ArrayType *arrayType = ArrayType::get(I, num);
@@ -68,20 +53,14 @@ Value *BallPass::insertEntryFn(Function &F, Module &M) {
   Value *indexList[] = {ConstantInt::get(I, 0)};
   auto cast = builder.CreateGEP(I, inst, indexList);
   auto zero = ConstantInt::get(IntegerType::getInt8Ty(M.getContext()), 0);
-  builder.CreateMemSet(cast, zero, num*4, inst->getAlign());
+  builder.CreateMemSet(cast, zero, num * 4, inst->getAlign());
   return inst;
 }
 
-void BallPass::insertIncrFn(Module &M, BlockPtr BB1, BlockPtr BB2, int i,
+void NissePass::insertIncrFn(Module &M, Instruction *instruction, int i,
                             Value *inst) {
-  Instruction *target;
-  if (BB1->getUniqueSuccessor()) {
-    target = BB1->getTerminator();
-  } else {
-    target = &*BB2->getFirstInsertionPt();
-  }
   auto *I = IntegerType::getInt32Ty(M.getContext());
-  IRBuilder<> builder(target);
+  IRBuilder<> builder(instruction);
   Value *indexList[1] = {ConstantInt::get(I, i)};
   Value *one = ConstantInt::get(I, 1);
   auto inst1 = builder.CreateGEP(I, inst, indexList);
@@ -90,7 +69,7 @@ void BallPass::insertIncrFn(Module &M, BlockPtr BB1, BlockPtr BB2, int i,
   builder.CreateStore(inst3, inst1);
 }
 
-void BallPass::insertExitFn(BlockPtr BB, llvm::Function &F, llvm::Module &M,
+void NissePass::insertExitFn(BlockPtr BB, llvm::Function &F, llvm::Module &M,
                             llvm::Value *inst) {
   auto insertion_point = BB->getTerminator();
 
@@ -119,32 +98,54 @@ void BallPass::insertExitFn(BlockPtr BB, llvm::Function &F, llvm::Module &M,
   builder.CreateCall(f_call, a_vals);
 }
 
-PreservedAnalyses BallPass::run(Function &F, FunctionAnalysisManager &FAM) {
-  auto &edges = FAM.getResult<BallAnalysis>(F);
-  this->STEdges = edges;
-  this->reverseSTEdges.clear();
-
-  for (auto i = F.begin(); i != F.end(); ++i) {
-    for (auto j = i; ++j != F.end(); /**/) {
-      this->addToReverse(&*i, &*j);
-    }
-  }
+PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
+  auto &edges = FAM.getResult<NisseAnalysis>(F);
+  this->reverseSTEdges = edges.second.second;
 
   auto inst = this->insertEntryFn(F, *F.getParent());
-  this->insertExitFn(&F.getEntryBlock(), F, *F.getParent(), inst);
 
   int i = 0;
   for (auto p : this->reverseSTEdges) {
-    this->insertIncrFn(*F.getParent(), p.first, p.second, i++, inst);
+    this->insertIncrFn(*F.getParent(), p.getInstrument(), i++, inst);
   }
 
-  for (BasicBlock &BB : F) {
-    auto term = BB.getTerminator();
-    if (isa<ReturnInst>(term)) {
-      this->insertExitFn(&BB, F, *F.getParent(), inst);
-    }
-  }
+  this->insertExitFn(NisseAnalysis::findExitBlock(F), F, *F.getParent(), inst);
 
   return PreservedAnalyses::all();
 }
-} // namespace ball
+
+PreservedAnalyses NissePassPrint::run(Function &F, FunctionAnalysisManager &FAM) {
+  auto &edges = FAM.getResult<NisseAnalysis>(F);
+  this->reverseSTEdges = edges.second.second;
+
+  OS << "\n" << F.getName() << "\n\tEdges:\n";
+
+  for (auto p:edges.first) {
+    OS << "\t\t" << p.getName() << "\n";
+  }
+
+  OS << "\tSpanning Tree:\n";
+
+  for (auto p:edges.second.first) {
+    OS << "\t\t" << p.getName() << "\n";
+  }
+
+  OS << "\tReverse:\n";
+
+  for (auto p:this->reverseSTEdges) {
+    OS << "\t\t" << p.getName() << "\n";
+  }
+
+  auto inst = this->insertEntryFn(F, *F.getParent());
+
+  int i = 0;
+  for (auto p : this->reverseSTEdges) {
+    this->insertIncrFn(*F.getParent(), p.getInstrument(), i++, inst);
+  }
+
+  this->insertExitFn(NisseAnalysis::findExitBlock(F), F, *F.getParent(), inst);
+
+  return PreservedAnalyses::all();
+}
+
+} // namespace nisse

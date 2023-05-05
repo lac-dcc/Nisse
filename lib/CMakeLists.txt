@@ -1,10 +1,11 @@
 #===============================================================================
 # See: https://llvm.org/docs/CMake.html#developing-llvm-passes-out-of-source
 #===============================================================================
-add_library(Ball MODULE
-    BallPass.cpp
-    BallAnalysis.cpp
-    BallPlugin.cpp)
+add_library(Nisse MODULE
+    NissePass.cpp
+    NisseAnalysis.cpp
+    NissePlugin.cpp
+    aux.cpp)
 
-target_include_directories(Ball PRIVATE
+target_include_directories(Nisse PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/../include")

@@ -1,5 +1,5 @@
-//===-- BallPlugin.cpp ------------------------------------------------===//
-// Copyright (C) 2020  Luigi D. C. Soares, Augusto Dias Noronha
+//===-- NissePlugin.cpp ------------------------------------------------===//
+// Copyright (C) 2023 Leon Frenot
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,10 +18,10 @@
 /// \file
 /// This file is the entry point for the New PM opt plugin. That is, it
 /// contains the New PM registration for all the analyses and transformations
-/// related to the Ball plugin.
+/// related to the Nisse plugin.
 //===----------------------------------------------------------------------===//
 //
-#include "Ball.h"
+#include "Nisse.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 
@@ -30,7 +30,7 @@ using namespace llvm;
 /// Takes a FunctionAnalysisManager \p FAM and uses it to register all the
 /// analyses created, so any pass can request their results.
 void registerAnalyses(FunctionAnalysisManager &FAM) {
-  FAM.registerPass([] { return ball::BallAnalysis(); });
+  FAM.registerPass([] { return nisse::NisseAnalysis(); });
 }
 
 /// Takes the \p Name of a transformation pass and check if it is the name of
@@ -42,32 +42,37 @@ void registerAnalyses(FunctionAnalysisManager &FAM) {
 bool registerPipeline(StringRef Name, FunctionPassManager &FPM,
                       ArrayRef<PassBuilder::PipelineElement>) {
 
-  if (Name == "ball") {
-    FPM.addPass(ball::BallPass());
+  if (Name == "nisse") {
+    FPM.addPass(nisse::NissePass());
+    return true;
+  }
+
+  if (Name == "print<nisse>") {
+    FPM.addPass(nisse::NissePassPrint(errs()));
     return true;
   }
 
   return false;
 }
 
-PassPluginLibraryInfo getBallPluginInfo() {
-  return {LLVM_PLUGIN_API_VERSION, "Ball", LLVM_VERSION_STRING,
+PassPluginLibraryInfo getNissePluginInfo() {
+  return {LLVM_PLUGIN_API_VERSION, "Nisse", LLVM_VERSION_STRING,
           [](PassBuilder &PB) {
-            // 1: Register the BallAnalysis as an analysis pass so that
+            // 1: Register the NisseAnalysis as an analysis pass so that
             // it can be requested by other passes as following:
-            // FPM.getResult<BallAnalysis>(F), where FPM is the
+            // FPM.getResult<NisseAnalysis>(F), where FPM is the
             // FunctionAnalysisManager and F is the Function that shall be
             // analyzed.
             PB.registerAnalysisRegistrationCallback(registerAnalyses);
 
-            // 2: Register the BallPrinterPass as "print<add-const>" so
+            // 2: Register the NissePrinterPass as "print<add-const>" so
             // that it can be used when specifying pass pipelines with
-            // "-passes=". Also register BallPass as "add-const".
+            // "-passes=". Also register NissePass as "add-const".
             PB.registerPipelineParsingCallback(registerPipeline);
           }};
 }
 
 // The public entry point for a pass plugin:
 extern "C" LLVM_ATTRIBUTE_WEAK PassPluginLibraryInfo llvmGetPassPluginInfo() {
-  return getBallPluginInfo();
+  return getNissePluginInfo();
 }

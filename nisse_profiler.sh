@@ -14,7 +14,7 @@ else
   LLVM_INSTALL_DIR=$PROG_HOME/llvm-project/build
   LLVM_OPT=$LLVM_INSTALL_DIR/bin/opt
   LLVM_CLANG=$LLVM_INSTALL_DIR/bin/clang
-  MY_LLVM_LIB=$PROG_HOME/Nisse/build/lib/libBall.so
+  MY_LLVM_LIB=$PROG_HOME/Nisse/build/lib/libNisse.so
   PROFILER_IMPL=$PROG_HOME/Nisse/lib/prof.c
 
   # Move to folder where the file is:
@@ -29,6 +29,14 @@ else
   LL_NAME="$BS_NAME.ll"
   PF_NAME="$BS_NAME.profiled.ll"
 
+  # Pass to use:
+  if [ $# -eq 2 ]
+  then
+    PASS="print<nisse>"
+  else
+    PASS="nisse"
+  fi
+
   # Generating the bytecode in SSA form:
   #
   $LLVM_CLANG -Xclang -disable-O0-optnone -c -S -emit-llvm $FL_NAME -o $LL_NAME
@@ -36,13 +44,13 @@ else
 
   # Running the pass:
   #
-  $LLVM_OPT -S -load-pass-plugin $MY_LLVM_LIB -passes=ball -stats \
+  $LLVM_OPT -S -load-pass-plugin $MY_LLVM_LIB -passes=$PASS -stats \
      $LL_NAME -o $PF_NAME
 
   # Compile the newly instrumented program, and link it against the profiler.
   # We are passing -no_pie to disable address space layout randomization:
   #
-  $LLVM_CLANG -Wl $PF_NAME $PROFILER_IMPL -o $BS_NAME
+  $LLVM_CLANG -Wall $PF_NAME $PROFILER_IMPL -o $BS_NAME
 
   # Run the instrumented binary:
   #

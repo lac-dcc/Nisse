@@ -2,7 +2,7 @@
 # See: https://github.com/banach-space/llvm-tutor/blob/master/CMakeLists.txt
 #===============================================================================
 cmake_minimum_required(VERSION 3.13.4)
-project(ball)
+project(nisse)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 

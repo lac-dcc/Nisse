@@ -13,20 +13,22 @@ cd build
 make
 ```
 
-# Runing
-We provide a bash script to run our passes:
+# Running
+We provide a bash script to run our passes, which can be invoked as follows:
 
 ```bash
 sh nisse_profiler.sh <path/to/file.c>
 ```
-Will create in that file's folder :
+
+This basic command will create, in the current folder, the following files:
+
  * `file.ll` an IR file modified by the following LLVM passes: mem2reg, instnamer, and break-crit-edges.
  * `file.profiled.ll` an IR file instrumented with Ball-Larus counters.
  * `file` an executable file compiled from `file.profiled.ll`.
 
 # Printing Debugging Data
 To print edges, spanning tree and the complement of the spanning tree, just
-append an extra argument to the `niss_profiler` script:
+append an extra argument to the `niss_profiler.sh` script, as follows:
 
 ```bash
 sh nisse_profiler.sh <path/to/file.c> <sth>

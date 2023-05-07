@@ -36,13 +36,19 @@ namespace nisse {
 
 using BlockPtr = llvm::BasicBlock *;
 
+/// \struct Edge
+///
+/// \brief Representation of a CFG edge connecting two basic blocks.
+///
 struct Edge {
 private:
-  BlockPtr BB1;
-  BlockPtr BB2;
-  llvm::Instruction *BBInstrument;
-  int weight;
+  BlockPtr BB1; ///< The origin of the edge.
+  BlockPtr BB2; ///< The destination of the edge.
+  llvm::Instruction *BBInstrument; ///< Hook to insert Ball-Larus counter.
+  int weight; ///< An expectation of how often this edge will be executed.
 
+  /// \brief Adds a name to the edge, for debugging purposes.
+  /// \param name The name of the edge.
   void setName(std::string name);
 
 public:

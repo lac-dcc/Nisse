@@ -35,10 +35,11 @@ NissePass::insertEntryFn(Function &F, multiset<Edge> &reverseSTEdges) {
   IRBuilder<> builder(&F.getEntryBlock(), F.getEntryBlock().begin());
   auto *I = builder.getInt32Ty();
   ArrayType *arrayType = ArrayType::get(I, size);
-  auto counterInst = builder.CreateAlloca(arrayType, nullptr, "counter-array");
   Value *indexList[] = {builder.getInt32(0)};
-  auto cast = builder.CreateGEP(I, counterInst, indexList);
   auto zero = builder.getInt8(0);
+
+  auto counterInst = builder.CreateAlloca(arrayType, nullptr, "counter-array");
+  auto cast = builder.CreateGEP(I, counterInst, indexList);
   builder.CreateMemSet(cast, zero, size * 4, counterInst->getAlign());
 
   auto indexInst = builder.CreateAlloca(arrayType, nullptr, "index-array");
@@ -46,6 +47,7 @@ NissePass::insertEntryFn(Function &F, multiset<Edge> &reverseSTEdges) {
   for (auto e : reverseSTEdges) {
     auto indexCst = builder.getInt32(e.getIndex());
     Value *indexList[] = {builder.getInt32(index++)};
+
     auto cast = builder.CreateGEP(I, indexInst, indexList);
     builder.CreateStore(indexCst, cast);
   }
@@ -72,12 +74,15 @@ void NissePass::insertExitFn(llvm::Function &F, llvm::Value *counterInst,
 
   llvm::Type *r_type = builder.getVoidTy();
 
-  llvm::SmallVector<llvm::Type *, 4> a_types;
-  llvm::SmallVector<llvm::Value *, 4> a_vals;
+  llvm::SmallVector<llvm::Type *, 5> a_types;
+  llvm::SmallVector<llvm::Value *, 5> a_vals;
 
   a_types.push_back(builder.getInt8PtrTy());
   llvm::StringRef function_name = insertion_point->getFunction()->getName();
   a_vals.push_back(builder.CreateGlobalStringPtr(function_name, "str"));
+
+  a_types.push_back(builder.getInt32Ty());
+  a_vals.push_back(builder.getInt32(function_name.size()));
 
   a_types.push_back(counterInst->getType());
   a_vals.push_back(counterInst);

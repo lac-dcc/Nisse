@@ -103,6 +103,8 @@ public:
   /// @param dt Edge to print
   /// @return the output stream
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Edge &dt);
+
+  friend std::ostream& operator<<(std::ostream& os, const Edge& e);
 };
 /// \struct UnionFind
 ///

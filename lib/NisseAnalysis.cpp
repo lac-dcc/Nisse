@@ -23,6 +23,8 @@
 
 #include "Nisse.h"
 #include "llvm/IR/Instructions.h"
+// #include <iostream>
+#include <fstream>
 
 using namespace llvm;
 using namespace std;
@@ -81,6 +83,32 @@ NisseAnalysis::Result NisseAnalysis::run(llvm::Function &F,
 
   auto edges = this->generateEdges(F);
   auto STrev = this->generateSTrev(F, edges);
+
+  string fileName = F.getName().str() + ".graph";
+
+  errs() << "Writing '" << fileName << "'...";
+
+  int blockCount = distance(F.begin(), F.end());
+
+  ofstream file;
+  file.open(fileName, ios::out | ios::trunc);
+
+  file << blockCount << " Basic Blocks\n";
+  for (auto &BB: F) {
+    file << '\t' << BB.getName().str() << '\n';
+  }
+
+  file << STrev.first.size() << " Edges in the Spanning Tree\n";
+  for (auto e: STrev.first) {
+    file << '\t' << e << '\n';
+  }
+
+  file << STrev.second.size() << " Instrumented Edges\n";
+  for (auto e: STrev.second) {
+    file << '\t' << e << '\n';
+  }
+
+  file.close();
 
   return make_tuple(edges, STrev.first, STrev.second);
 }

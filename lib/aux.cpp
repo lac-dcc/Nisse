@@ -56,9 +56,7 @@ Instruction *Edge::getInstrument() const {
   return instr;
 }
 
-int Edge::getIndex() const {
-  return this->index;
-}
+int Edge::getIndex() const { return this->index; }
 
 string Edge::getName() const {
   if (this->name.length() > 0) {
@@ -80,6 +78,12 @@ bool Edge::compareWeights(const Edge &a, const Edge &b) {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Edge &e) {
   os << e.getName() << " : " << e.getOrigin()->getName() << " -> "
      << e.getDest()->getName();
+  return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const Edge &e) {
+  os << e.getName() << string(" : ") << e.getOrigin()->getName().str()
+     << string(" -> ") << e.getDest()->getName().str();
   return os;
 }
 

@@ -104,19 +104,19 @@ PreservedAnalyses NissePassPrint::run(Function &F,
   OS << "\n" << F.getName() << "\n\tEdges:\n";
 
   for (auto p : get<0>(edges)) {
-    OS << "\t\t" << p.getName() << "\n";
+    OS << "\t\t" << p << "\n";
   }
 
   OS << "\tSpanning Tree:\n";
 
   for (auto p : get<1>(edges)) {
-    OS << "\t\t" << p.getName() << "\n";
+    OS << "\t\t" << p << "\n";
   }
 
   OS << "\tInstrumented edges:\n";
 
   for (auto p : reverseSTEdges) {
-    OS << "\t\t" << p.getName() << "\n";
+    OS << "\t\t" << p << "\n";
   }
 
   auto inst = this->insertEntryFn(F);

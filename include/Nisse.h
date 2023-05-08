@@ -38,31 +38,30 @@ using BlockPtr = llvm::BasicBlock *;
 ///
 struct Edge {
 private:
-  BlockPtr origin;                 ///< The origin of the edge.
-  BlockPtr dest;                   ///< The destination of the edge.
-  llvm::Instruction *BBInstrument; ///< Hook to insert Ball-Larus counter.
+  BlockPtr origin;  ///< The origin of the edge.
+  BlockPtr dest;    ///< The destination of the edge.
+  int index;        ///< Index of the edge.
   int weight;       ///< An expectation of how often this edge will be executed.
   std::string name; ///< User-defined edge name, for debugging purposes.
-
-  /// \brief Adds a name to the edge, for debugging purposes.
-  /// \param name The name of the edge.
-  void setName(std::string name);
 
 public:
   /// \brief Default constructor for Edge.
   /// \param origin The origin of the edge.
   /// \param dest The destination of the edge.
+  /// \param index An index for the edge.
   /// \param weight (optional) An expectation of how often the edge will be
   /// executed.
-  Edge(BlockPtr origin, BlockPtr dest, int weight = 1, std::string = "");
+  /// \param name (optional) User-defined edge name.
+  Edge(BlockPtr origin, BlockPtr dest, int index, int weight = 1,
+       std::string name = "");
 
   /// \brief Getter for the destination of the edge.
   /// \return The destination of the edge.
-  BlockPtr getOrigin();
+  BlockPtr getOrigin() const;
 
   /// \brief Getter for the destination of the edge.
   /// \return The destination of the edge.
-  BlockPtr getDest();
+  BlockPtr getDest() const;
 
   /// \brief Computes the hook to insert the Ball-Larus counter.
   /// If the source block terminates with an absolute jump, the counter is
@@ -70,13 +69,12 @@ public:
   /// destination block. If the hooked block is the entry block, the counter
   /// will always be placed at the end of the block.
   /// \return The pointer to the hook for the counter.
-  llvm::Instruction *getInstrument();
+  llvm::Instruction *getInstrument() const;
 
   /// \brief Getter for the name of the edge.
-  /// If there is no user-defined name, will return a default name in the form
-  /// of "Origin -> Dest".
+  /// If there is no user-defined name, will return the edge's index.
   /// \return Returns the name of the edge.
-  llvm::Twine getName();
+  std::string getName() const;
 
   /// \brief Checks if two edges have the same origins and destinations.
   /// \param e Edge to compare the current edge to.
@@ -93,7 +91,13 @@ public:
   /// \param a First edge to compare.
   /// \param b Second edge to compare.
   /// \return true if a has higher weight than b.
-  static bool compareWeights(Edge a, Edge b);
+  static bool compareWeights(const Edge &a, const Edge &b);
+
+  /// @brief Prints the edge name, the name of its origin, and the name of its destination.
+  /// @param os Output stream
+  /// @param dt Edge to print
+  /// @return the output stream
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Edge &dt);
 };
 /// \struct UnionFind
 ///

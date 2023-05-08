@@ -44,13 +44,13 @@ AnalysisKey NisseAnalysis::Key;
 
 SmallVector<Edge> NisseAnalysis::generateEdges(Function &F) {
   SmallVector<Edge> edges;
-
+  int index = 0;
   for (auto &BB : F) {
     for (auto Succ : successors(&BB)) {
-      edges.push_back(Edge(&BB, Succ));
+      edges.push_back(Edge(&BB, Succ, index++));
     }
   }
-  edges.push_back(Edge(findReturnBlock(F), &F.getEntryBlock(), 0));
+  edges.push_back(Edge(findReturnBlock(F), &F.getEntryBlock(), index++, 0));
   return edges;
 }
 

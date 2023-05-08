@@ -30,39 +30,37 @@ namespace nisse {
 
 // Implementation of Edge
 
-Edge::Edge(BlockPtr origin, BlockPtr dest, int weight, string name) {
-  this->weight = weight;
-  this->BBInstrument = nullptr;
+Edge::Edge(BlockPtr origin, BlockPtr dest, int index, int weight, string name) {
   this->origin = origin;
   this->dest = dest;
+  this->index = index;
+  this->weight = weight;
   this->name = name;
 }
 
-BlockPtr Edge::getOrigin() { return this->origin; }
+BlockPtr Edge::getOrigin() const { return this->origin; }
 
-BlockPtr Edge::getDest() { return this->dest; }
+BlockPtr Edge::getDest() const { return this->dest; }
 
-// Instrument the source block if it ends with an absolute jump
-// Instrument the destination block otherwise (no critical edges)
-Instruction *Edge::getInstrument() {
-  if (this->BBInstrument != nullptr)
-    return this->BBInstrument;
+Instruction *Edge::getInstrument() const {
+  Instruction *instr;
   if (this->origin->getUniqueSuccessor() == this->dest) {
-    this->BBInstrument = this->origin->getTerminator();
+    instr = this->origin->getTerminator();
   } else {
-    this->BBInstrument = &*this->dest->getFirstInsertionPt();
+    instr = &*this->dest->getFirstInsertionPt();
   }
-  auto parent = this->BBInstrument->getParent();
+  auto parent = instr->getParent();
   if (parent == &parent->getParent()->getEntryBlock()) {
-    this->BBInstrument = parent->getTerminator();
+    instr = parent->getTerminator();
   }
-  return this->BBInstrument;
+  return instr;
 }
 
-Twine Edge::getName() {
-  if (this->name.size() > 0)
+string Edge::getName() const {
+  if (this->name.length() > 0) {
     return this->name;
-  return this->origin->getName() + " to " + this->dest->getName();
+  }
+  return to_string(this->index);
 }
 
 bool Edge::equals(const Edge &e) const {
@@ -71,7 +69,15 @@ bool Edge::equals(const Edge &e) const {
 
 bool Edge::operator<(const Edge &e) const { return this->weight < e.weight; }
 
-bool Edge::compareWeights(Edge a, Edge b) { return a.weight > b.weight; }
+bool Edge::compareWeights(const Edge &a, const Edge &b) {
+  return a.weight > b.weight;
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Edge &e) {
+  os << e.getName() << " : " << e.getOrigin()->getName() << " -> "
+     << e.getDest()->getName();
+  return os;
+}
 
 // Implementation of UnionFind
 

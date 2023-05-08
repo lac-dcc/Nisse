@@ -30,7 +30,7 @@ namespace nisse {
 
 // Implementation of Edge
 
-Edge::Edge(BlockPtr origin, BlockPtr dest, int weight, std::string name) {
+Edge::Edge(BlockPtr origin, BlockPtr dest, int weight, string name) {
   this->weight = weight;
   this->BBInstrument = nullptr;
   this->origin = origin;
@@ -60,6 +60,8 @@ Instruction *Edge::getInstrument() {
 }
 
 Twine Edge::getName() {
+  if (this->name.size() > 0)
+    return this->name;
   return this->origin->getName() + " to " + this->dest->getName();
 }
 
@@ -69,7 +71,7 @@ bool Edge::equals(const Edge &e) const {
 
 bool Edge::operator<(const Edge &e) const { return this->weight < e.weight; }
 
-bool Edge::compareWeights(Edge a, Edge b) { return a.weight < b.weight; }
+bool Edge::compareWeights(Edge a, Edge b) { return a.weight > b.weight; }
 
 // Implementation of UnionFind
 

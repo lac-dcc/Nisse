@@ -56,6 +56,10 @@ Instruction *Edge::getInstrument() const {
   return instr;
 }
 
+int Edge::getIndex() const {
+  return this->index;
+}
+
 string Edge::getName() const {
   if (this->name.length() > 0) {
     return this->name;

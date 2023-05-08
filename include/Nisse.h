@@ -71,6 +71,10 @@ public:
   /// \return The pointer to the hook for the counter.
   llvm::Instruction *getInstrument() const;
 
+  /// @brief Getter for the edge's index.
+  /// @return the edge's index.
+  int getIndex() const;
+
   /// \brief Getter for the name of the edge.
   /// If there is no user-defined name, will return the edge's index.
   /// \return Returns the name of the edge.
@@ -93,7 +97,8 @@ public:
   /// \return true if a has higher weight than b.
   static bool compareWeights(const Edge &a, const Edge &b);
 
-  /// @brief Prints the edge name, the name of its origin, and the name of its destination.
+  /// @brief Prints the edge name, the name of its origin, and the name of its
+  /// destination.
   /// @param os Output stream
   /// @param dt Edge to print
   /// @return the output stream
@@ -179,25 +184,26 @@ public:
 /// \brief Instruments a function for Ball-Larus edge instrumentation.
 struct NissePass : public llvm::PassInfoMixin<NissePass> {
 protected:
-  int size; ///< The number of edges to instrument.
-
   /// \brief Inserts the initialization code, which creates a
   /// 0-initialized array of ints of size size.
   /// \param F The function to instrument.
   /// \return The instruction pointer to the assignment of the array.
-  llvm::Value *insertEntryFn(llvm::Function &F);
+  std::pair<llvm::Value *, llvm::Value *>
+  insertEntryFn(llvm::Function &F, std::multiset<Edge> &reverseSTEdges);
 
   /// \brief Inserts an increment to the counter array.
   /// \param instruction The instruction above which to insert the increment.
   /// \param i The index of the array to increment.
   /// \param inst The instruction pointer to the counter array.
-  void insertIncrFn(llvm::Instruction *instruction, int i, llvm::Value *inst);
+  void insertIncrFn(llvm::Instruction *instruction, int i,
+                    llvm::Value *counterInst);
 
   /// \brief Inserts a call to the function that prints the results of the
   /// counter.
   /// \param F The function begin instrumented.
   /// \param inst The instruction pointer to the counter array.
-  void insertExitFn(llvm::Function &F, llvm::Value *inst);
+  void insertExitFn(llvm::Function &F, llvm::Value *counterInst,
+                    llvm::Value *indexInst, int i);
 
 public:
   /// \brief The transformation pass' run function. Instruments the function

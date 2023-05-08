@@ -22,8 +22,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Nisse.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/IR/CFG.h"
 
 using namespace llvm;
 using namespace std;
@@ -32,26 +30,27 @@ namespace nisse {
 
 // Implementation of Edge
 
-Edge::Edge(BlockPtr BB1, BlockPtr BB2, int weight) {
+Edge::Edge(BlockPtr origin, BlockPtr dest, int weight, std::string name) {
   this->weight = weight;
   this->BBInstrument = nullptr;
-  this->BB1 = BB1;
-  this->BB2 = BB2;
+  this->origin = origin;
+  this->dest = dest;
+  this->name = name;
 }
 
-BlockPtr Edge::getFirst() { return this->BB1; }
+BlockPtr Edge::getOrigin() { return this->origin; }
 
-BlockPtr Edge::getSecond() { return this->BB2; }
+BlockPtr Edge::getDest() { return this->dest; }
 
 // Instrument the source block if it ends with an absolute jump
 // Instrument the destination block otherwise (no critical edges)
 Instruction *Edge::getInstrument() {
   if (this->BBInstrument != nullptr)
     return this->BBInstrument;
-  if (this->BB1->getUniqueSuccessor() == this->BB2) {
-    this->BBInstrument = this->BB1->getTerminator();
+  if (this->origin->getUniqueSuccessor() == this->dest) {
+    this->BBInstrument = this->origin->getTerminator();
   } else {
-    this->BBInstrument = &*this->BB2->getFirstInsertionPt();
+    this->BBInstrument = &*this->dest->getFirstInsertionPt();
   }
   auto parent = this->BBInstrument->getParent();
   if (parent == &parent->getParent()->getEntryBlock()) {
@@ -61,11 +60,11 @@ Instruction *Edge::getInstrument() {
 }
 
 Twine Edge::getName() {
-  return this->BB1->getName() + " to " + this->BB2->getName();
+  return this->origin->getName() + " to " + this->dest->getName();
 }
 
 bool Edge::equals(const Edge &e) const {
-  return this->BB1 == e.BB1 && this->BB2 == e.BB2;
+  return this->origin == e.origin && this->dest == e.dest;
 }
 
 bool Edge::operator<(const Edge &e) const { return this->weight < e.weight; }
@@ -74,27 +73,27 @@ bool Edge::compareWeights(Edge a, Edge b) { return a.weight < b.weight; }
 
 // Implementation of UnionFind
 
-void UnionFind::init(BlockPtr BB) {
-  this->id[BB] = BB;
-  this->sz[BB] = 1;
+void UnionFind::init(void *x) {
+  this->id[x] = x;
+  this->sz[x] = 1;
   this->cnt++;
 }
 
-BlockPtr UnionFind::find(BlockPtr BB) {
-  BlockPtr root = BB;
+void *UnionFind::find(void *x) {
+  void *root = x;
   while (root != this->id[root])
     root = this->id[root];
-  while (BB != root) {
-    BlockPtr newp = this->id[BB];
-    this->id[BB] = root;
-    BB = newp;
+  while (x != root) {
+    void *newp = this->id[x];
+    this->id[x] = root;
+    x = newp;
   }
   return root;
 }
 
-void UnionFind::merge(BlockPtr x, BlockPtr y) {
-  BlockPtr i = this->find(x);
-  BlockPtr j = this->find(y);
+void UnionFind::merge(void *x, void *y) {
+  void *i = this->find(x);
+  void *j = this->find(y);
   if (i == j)
     return;
   // make smaller root point to larger one
@@ -106,7 +105,7 @@ void UnionFind::merge(BlockPtr x, BlockPtr y) {
   this->cnt--;
 }
 
-bool UnionFind::connected(BlockPtr x, BlockPtr y) {
+bool UnionFind::connected(void *x, void *y) {
   return this->find(x) == this->find(y);
 }
 

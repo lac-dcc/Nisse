@@ -22,22 +22,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Nisse.h"
-#include "llvm-c/Core.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/CFG.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/PassManager.h"
-#include <set>
-#include <utility>
+#include "llvm/IR/Instructions.h"
 
 using namespace llvm;
 using namespace std;
 
 namespace nisse {
 
-BlockPtr NisseAnalysis::findExitBlock(llvm::Function &F) {
+BlockPtr NisseAnalysis::findReturnBlock(llvm::Function &F) {
   for (llvm::BasicBlock &BB : F) {
     auto term = BB.getTerminator();
     if (llvm::isa<llvm::ReturnInst>(term)) {
@@ -55,14 +47,15 @@ SmallVector<Edge> NisseAnalysis::generateEdges(Function &F) {
 
   for (auto &BB : F) {
     for (auto Succ : successors(&BB)) {
-      edges.push_back(Edge(&BB, Succ, 1));
+      edges.push_back(Edge(&BB, Succ));
     }
   }
-  edges.push_back(Edge(findExitBlock(F), &F.getEntryBlock(), 0));
+  edges.push_back(Edge(findReturnBlock(F), &F.getEntryBlock(), 0));
   return edges;
 }
 
-pair<multiset<Edge>,multiset<Edge>> NisseAnalysis::generateSTrev(Function &F, SmallVector<Edge> &edges) {
+pair<multiset<Edge>, multiset<Edge>>
+NisseAnalysis::generateSTrev(Function &F, SmallVector<Edge> &edges) {
   multiset<Edge> ST;
   multiset<Edge> rev;
   UnionFind uf;
@@ -71,8 +64,8 @@ pair<multiset<Edge>,multiset<Edge>> NisseAnalysis::generateSTrev(Function &F, Sm
   }
   llvm::sort(edges.begin(), edges.end(), Edge::compareWeights);
   for (auto e : edges) {
-    auto BB1 = e.getFirst();
-    auto BB2 = e.getSecond();
+    auto BB1 = e.getOrigin();
+    auto BB2 = e.getDest();
     if (!uf.connected(BB1, BB2)) {
       ST.insert(e);
       uf.merge(BB1, BB2);
@@ -89,6 +82,6 @@ NisseAnalysis::Result NisseAnalysis::run(llvm::Function &F,
   auto edges = this->generateEdges(F);
   auto STrev = this->generateSTrev(F, edges);
 
-  return pair(edges,STrev);
+  return make_tuple(edges, STrev.first, STrev.second);
 }
 } // namespace nisse

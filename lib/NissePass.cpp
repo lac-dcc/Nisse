@@ -21,20 +21,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Nisse.h"
-#include "llvm-c/Core.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CFG.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/PassManager.h"
-#include "llvm/IR/Value.h"
-
-#include <set>
-#include <utility>
 #include <iostream>
 
 using namespace llvm;
@@ -42,42 +29,35 @@ using namespace std;
 
 namespace nisse {
 
-Value *NissePass::insertEntryFn(Function &F, Module &M) {
-  auto *I = IntegerType::getInt32Ty(M.getContext());
-  auto num = this->reverseSTEdges.size();
-  ArrayType *arrayType = ArrayType::get(I, num);
-  // Instruction *funcEntry =
-  //     dyn_cast<Instruction>(F.getEntryBlock().getFirstInsertionPt());
+Value *NissePass::insertEntryFn(Function &F) {
   IRBuilder<> builder(&F.getEntryBlock(), F.getEntryBlock().begin());
+  auto *I = builder.getInt32Ty();
+  ArrayType *arrayType = ArrayType::get(I, this->size);
   auto inst = builder.CreateAlloca(arrayType, nullptr, "counter-array");
-  Value *indexList[] = {ConstantInt::get(I, 0)};
+  Value *indexList[] = {builder.getInt32(0)};
   auto cast = builder.CreateGEP(I, inst, indexList);
-  auto zero = ConstantInt::get(IntegerType::getInt8Ty(M.getContext()), 0);
-  builder.CreateMemSet(cast, zero, num * 4, inst->getAlign());
+  auto zero = builder.getInt8(0);
+  builder.CreateMemSet(cast, zero, this->size * 4, inst->getAlign());
   return inst;
 }
 
-void NissePass::insertIncrFn(Module &M, Instruction *instruction, int i,
-                            Value *inst) {
-  auto *I = IntegerType::getInt32Ty(M.getContext());
+void NissePass::insertIncrFn(Instruction *instruction, int i, Value *inst) {
   IRBuilder<> builder(instruction);
-  Value *indexList[1] = {ConstantInt::get(I, i)};
-  Value *one = ConstantInt::get(I, 1);
+  auto *I = builder.getInt32Ty();
+  Value *indexList[] = {builder.getInt32(i)};
+  Value *one = builder.getInt32(1);
   auto inst1 = builder.CreateGEP(I, inst, indexList);
   auto inst2 = builder.CreateLoad(I, inst1);
   auto inst3 = builder.CreateAdd(inst2, one);
   builder.CreateStore(inst3, inst1);
 }
 
-void NissePass::insertExitFn(BlockPtr BB, llvm::Function &F, llvm::Module &M,
-                            llvm::Value *inst) {
+void NissePass::insertExitFn(llvm::Function &F, llvm::Value *inst) {
+  BlockPtr BB = NisseAnalysis::findReturnBlock(F);
   auto insertion_point = BB->getTerminator();
-
-  llvm::LLVMContext &context = insertion_point->getContext();
-
   IRBuilder<> builder(insertion_point);
 
-  llvm::Type *r_type = llvm::FunctionType::getVoidTy(context);
+  llvm::Type *r_type = builder.getVoidTy();
 
   llvm::SmallVector<llvm::Type *, 3> a_types;
   llvm::SmallVector<llvm::Value *, 3> a_vals;
@@ -90,60 +70,63 @@ void NissePass::insertExitFn(BlockPtr BB, llvm::Function &F, llvm::Module &M,
   a_vals.push_back(inst);
 
   a_types.push_back(builder.getInt32Ty());
-  a_vals.push_back(builder.getInt32(this->reverseSTEdges.size()));
+  a_vals.push_back(builder.getInt32(this->size));
 
   llvm::FunctionType *f_type = llvm::FunctionType::get(r_type, a_types, false);
-  llvm::Module *mod = insertion_point->getFunction()->getParent();
+  llvm::Module *mod = insertion_point->getModule();
   llvm::FunctionCallee f_call = mod->getOrInsertFunction("print_data", f_type);
   builder.CreateCall(f_call, a_vals);
 }
 
 PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
   auto &edges = FAM.getResult<NisseAnalysis>(F);
-  this->reverseSTEdges = edges.second.second;
+  auto &reverseSTEdges = get<2>(edges);
+  this->size = reverseSTEdges.size();
 
-  auto inst = this->insertEntryFn(F, *F.getParent());
+  auto inst = this->insertEntryFn(F);
 
   int i = 0;
-  for (auto p : this->reverseSTEdges) {
-    this->insertIncrFn(*F.getParent(), p.getInstrument(), i++, inst);
+  for (auto p : reverseSTEdges) {
+    this->insertIncrFn(p.getInstrument(), i++, inst);
   }
 
-  this->insertExitFn(NisseAnalysis::findExitBlock(F), F, *F.getParent(), inst);
+  this->insertExitFn(F, inst);
 
   return PreservedAnalyses::all();
 }
 
-PreservedAnalyses NissePassPrint::run(Function &F, FunctionAnalysisManager &FAM) {
+PreservedAnalyses NissePassPrint::run(Function &F,
+                                      FunctionAnalysisManager &FAM) {
   auto &edges = FAM.getResult<NisseAnalysis>(F);
-  this->reverseSTEdges = edges.second.second;
+  auto &reverseSTEdges = get<2>(edges);
+  this->size = reverseSTEdges.size();
 
   OS << "\n" << F.getName() << "\n\tEdges:\n";
 
-  for (auto p:edges.first) {
+  for (auto p : get<0>(edges)) {
     OS << "\t\t" << p.getName() << "\n";
   }
 
   OS << "\tSpanning Tree:\n";
 
-  for (auto p:edges.second.first) {
+  for (auto p : get<1>(edges)) {
     OS << "\t\t" << p.getName() << "\n";
   }
 
-  OS << "\tReverse:\n";
+  OS << "\tInstrumented edges:\n";
 
-  for (auto p:this->reverseSTEdges) {
+  for (auto p : reverseSTEdges) {
     OS << "\t\t" << p.getName() << "\n";
   }
 
-  auto inst = this->insertEntryFn(F, *F.getParent());
+  auto inst = this->insertEntryFn(F);
 
   int i = 0;
-  for (auto p : this->reverseSTEdges) {
-    this->insertIncrFn(*F.getParent(), p.getInstrument(), i++, inst);
+  for (auto p : reverseSTEdges) {
+    this->insertIncrFn(p.getInstrument(), i++, inst);
   }
 
-  this->insertExitFn(NisseAnalysis::findExitBlock(F), F, *F.getParent(), inst);
+  this->insertExitFn(F, inst);
 
   return PreservedAnalyses::all();
 }

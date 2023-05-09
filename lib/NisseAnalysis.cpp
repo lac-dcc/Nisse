@@ -47,7 +47,6 @@ string NisseAnalysis::removebb(const std::string &s) {
   return "0";
 }
 
-
 // Initialize the analysis key.
 AnalysisKey NisseAnalysis::Key;
 
@@ -71,6 +70,7 @@ NisseAnalysis::generateSTrev(Function &F, SmallVector<Edge> &edges) {
   for (auto &BB : F) {
     uf.init(&BB);
   }
+
   llvm::sort(edges.begin(), edges.end(), Edge::compareWeights);
   for (auto e : edges) {
     auto BB1 = e.getOrigin();
@@ -101,24 +101,24 @@ NisseAnalysis::Result NisseAnalysis::run(llvm::Function &F,
   file.open(fileName, ios::out | ios::trunc);
 
   file << blockCount;
-  for (auto &BB: F) {
+  for (auto &BB : F) {
     file << ' ' << NisseAnalysis::removebb(BB.getName().str());
   }
   file << endl;
 
   file << edges.size();
-  for (auto e: edges) {
+  for (auto e : edges) {
     file << '\t' << e << '\n';
   }
 
   file << STrev.first.size();
-  for (auto e: STrev.first) {
+  for (auto e : STrev.first) {
     file << ' ' << e.getIndex();
   }
   file << endl;
 
   file << STrev.second.size();
-  for (auto e: STrev.second) {
+  for (auto e : STrev.second) {
     file << ' ' << e.getIndex();
   }
 

@@ -31,35 +31,37 @@
 using namespace std;
 using namespace llvm;
 
-/// @brief Shorthand for vector of int.
+/// \brief Shorthand for vector of int.
 using vi = vector<int>;
-/// @brief Shorthand for vector of vector of int.
+/// \brief Shorthand for vector of vector of int.
 using vvi = vector<vi>;
-/// @brief Shorthand for vector of pairs of int.
+/// \brief Shorthand for vector of pairs of int.
 using vpi = vector<pair<int, int>>;
-/// @brief Shorthand for set of int.
+/// \brief Shorthand for set of int.
 using si = set<int>;
-/// @brief Shorthand for map from int to set of int.
+/// \brief Shorthand for map from int to set of int.
 using msi = map<int, si>;
 
-/// @brief Initialises the variables given as input with the graph described by
+/// \brief Initialises the variables given as input with the graph described by
 /// the file input.
-/// @param input Path to the input file.
-/// @param vertex The graph's vertices.
-/// @param edges The graph's edges.
-/// @param ST A spanning tree of the graph.
-/// @param revST The edges not in the spanning tree.
-/// @param in in[x] contains the edges towards x.
-/// @param out out[x] contains the edges from x.
-/// @param debug Flag for the debug messages.
+/// \param input Path to the input file.
+/// \param vertex The graph's vertices.
+/// \param edges The graph's edges.
+/// \param ST A spanning tree of the graph.
+/// \param revST The edges not in the spanning tree.
+/// \param in in[x] contains the edges towards x.
+/// \param out out[x] contains the edges from x.
+/// \param debug Flag for the debug messages.
 void initGraph(string input, vi &vertex, vpi &edges, si &ST, si &revST, msi &in,
                msi &out, bool debug) {
   int count;
   ifstream graph;
   graph.open(input + ".graph");
   graph >> count;
+
   if (debug)
     cout << count << endl;
+
   for (int i = 0; i < count; i++) {
     int tmp;
     graph >> tmp;
@@ -67,6 +69,7 @@ void initGraph(string input, vi &vertex, vpi &edges, si &ST, si &revST, msi &in,
     in[tmp] = si();
     out[tmp] = si();
   }
+
   if (debug) {
     for (auto i : vertex) {
       cout << i << " ";
@@ -82,6 +85,7 @@ void initGraph(string input, vi &vertex, vpi &edges, si &ST, si &revST, msi &in,
     out.at(a).insert(i);
     in.at(b).insert(i);
   }
+
   if (debug) {
     for (auto p : edges) {
       cout << p.first << ' ' << p.second << '\n';
@@ -95,6 +99,7 @@ void initGraph(string input, vi &vertex, vpi &edges, si &ST, si &revST, msi &in,
     graph >> tmp;
     ST.insert(tmp);
   }
+
   if (debug) {
     for (auto i : ST) {
       cout << i << " ";
@@ -108,6 +113,7 @@ void initGraph(string input, vi &vertex, vpi &edges, si &ST, si &revST, msi &in,
     graph >> tmp;
     revST.insert(tmp);
   }
+
   if (debug) {
     for (auto i : revST) {
       cout << i << " ";
@@ -118,19 +124,20 @@ void initGraph(string input, vi &vertex, vpi &edges, si &ST, si &revST, msi &in,
   graph.close();
 }
 
-/// @brief Initialises the edge weights based on the input file. If there are
+/// \brief Initialises the edge weights based on the input file. If there are
 /// multiple profilings, will sum each of them to get the total profile.
-/// @param input Path to the input file.
-/// @param edgeCount Number of edges in the graph.
-/// @param instCount Number of instrumented edges.
-/// @param debug Flag for the debug messages.
-/// @return The weights of the edges, initialized at 0, or at the total value
+/// \param input Path to the input file.
+/// \param edgeCount Number of edges in the graph.
+/// \param instCount Number of instrumented edges.
+/// \param debug Flag for the debug messages.
+/// \return The weights of the edges, initialized at 0, or at the total value
 /// given in the input file.
 vi initWeights(string input, int edgeCount, int instCount, bool debug) {
   vi weights(edgeCount, 0);
   ifstream prof;
   string buf;
   prof.open(input + ".prof");
+
   while (prof >> buf) {
     for (auto i = 0; i < instCount; i++) {
       int edge, weight;
@@ -138,6 +145,7 @@ vi initWeights(string input, int edgeCount, int instCount, bool debug) {
       weights.at(edge) += weight;
     }
   }
+
   if (debug) {
     for (auto i : weights) {
       cout << i << " ";
@@ -149,13 +157,13 @@ vi initWeights(string input, int edgeCount, int instCount, bool debug) {
   return weights;
 }
 
-/// @brief Initialises the edge weights based on the input file. If there are
+/// \brief Initialises the edge weights based on the input file. If there are
 /// multiple profilings, will sum create a separate set of weights for each.
-/// @param input Path to the input file.
-/// @param edgeCount Number of edges in the graph.
-/// @param instCount Number of instrumented edges.
-/// @param debug Flag for the debug messages.
-/// @return The weights of the edges, initialized at 0, or at the values given
+/// \param input Path to the input file.
+/// \param edgeCount Number of edges in the graph.
+/// \param instCount Number of instrumented edges.
+/// \param debug Flag for the debug messages.
+/// \return The weights of the edges, initialized at 0, or at the values given
 /// in the input file.
 vvi initWeightsSeparate(string input, int edgeCount, int instCount,
                         bool debug) {
@@ -163,6 +171,7 @@ vvi initWeightsSeparate(string input, int edgeCount, int instCount,
   ifstream prof;
   string buf;
   prof.open(input + ".prof");
+
   while (prof >> buf) {
     vi w(edgeCount, 0);
     for (auto i = 0; i < instCount; i++) {
@@ -172,6 +181,7 @@ vvi initWeightsSeparate(string input, int edgeCount, int instCount,
     }
     weights.push_back(w);
   }
+
   if (debug) {
     for (auto w : weights) {
       for (auto i : w) {
@@ -180,18 +190,19 @@ vvi initWeightsSeparate(string input, int edgeCount, int instCount,
       cout << endl;
     }
   }
+
   prof.close();
   return weights;
 }
 
-/// @brief Propagates the weights across the entire graph.
-/// @param edges The graph's edges.
-/// @param ST The graph's spanning tree (edges that have not been instrumented).
-/// @param in in[x] contains the edges towards x.
-/// @param out out[x] contains the edges from x.
-/// @param weights The edge's weights.
-/// @param v The vertex to propagate from.
-/// @param e The edge to propagate from (not used on the initial call to the
+/// \brief Propagates the weights across the entire graph.
+/// \param edges The graph's edges.
+/// \param ST The graph's spanning tree (edges that have not been instrumented).
+/// \param in in[x] contains the edges towards x.
+/// \param out out[x] contains the edges from x.
+/// \param weights The edge's weights.
+/// \param v The vertex to propagate from.
+/// \param e The edge to propagate from (not used on the initial call to the
 /// function).
 void propagation(vpi &edges, si &ST, msi &in, msi &out, vi &weights, int v,
                  int e = -1) {
@@ -202,6 +213,7 @@ void propagation(vpi &edges, si &ST, msi &in, msi &out, vi &weights, int v,
     }
     in_sum += weights.at(ep);
   }
+
   int out_sum = 0;
   for (auto ep : out.at(v)) {
     if (ep != e && ST.count(ep) == 1) {
@@ -209,14 +221,15 @@ void propagation(vpi &edges, si &ST, msi &in, msi &out, vi &weights, int v,
     }
     out_sum += weights.at(ep);
   }
+
   if (e != -1) {
     weights.at(e) = max(in_sum, out_sum) - min(in_sum, out_sum);
   }
 }
 
-/// @brief Outputs the weights of the edges to the standard output.
-/// @param edges The graph's edges.
-/// @param weights The edge's weights.
+/// \brief Outputs the weights of the edges to the standard output.
+/// \param edges The graph's edges.
+/// \param weights The edge's weights.
 void outputCout(vpi &edges, vi &weights) {
   int size = edges.size();
   for (int i = 0; i < size; i++) {
@@ -226,32 +239,35 @@ void outputCout(vpi &edges, vi &weights) {
   cout << endl;
 }
 
-/// @brief Outputs the weights of the edges to the file given as input.
-/// @param filename The path to the file to write the results.
-/// @param edges The graph's edges.
-/// @param weights The edge's weights.
+/// \brief Outputs the weights of the edges to the file given as input.
+/// \param filename The path to the file to write the results.
+/// \param edges The graph's edges.
+/// \param weights The edge's weights.
 void outputFile(string filename, vpi &edges, vi &weights) {
   ofstream file;
   file.open(filename, ios::out | ios::trunc);
+
   if (file.bad()) {
     cout << "Could not open file " << filename << endl;
     outputCout(edges, weights);
   }
+
   int size = edges.size();
   for (int i = 0; i < size; i++) {
     file << edges.at(i).first << " -> " << edges.at(i).second << " : "
          << weights.at(i) << '\n';
   }
+
   file << endl;
   file.close();
 }
 
-/// @brief Propagates the weights given by edge instrumentation. If the graph is
+/// \brief Propagates the weights given by edge instrumentation. If the graph is
 /// described in x.graph and the profiling in x.prof, call with x as the input
 /// file.
-/// @param argc (⊙ˍ⊙)
-/// @param argv (⊙ˍ⊙)
-/// @return 0
+/// \param argc (⊙ˍ⊙)
+/// \param argv (⊙ˍ⊙)
+/// \return 0
 int main(int argc, char **argv) {
   cl::opt<string> InputFilename(cl::Positional, cl::desc("<input file>"),
                                 cl::Required);
@@ -260,6 +276,7 @@ int main(int argc, char **argv) {
   cl::opt<bool> Debug("d", cl::desc("Enable debug messages"));
   cl::opt<bool> Separate(
       "s", cl::desc("Do separate profilings for each function execution"));
+
   cl::ParseCommandLineOptions(argc, argv);
   ifstream graph;
   graph.open(InputFilename + ".graph");

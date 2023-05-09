@@ -49,6 +49,7 @@ Instruction *Edge::getInstrument() const {
   } else {
     instr = &*this->dest->getFirstInsertionPt();
   }
+
   auto parent = instr->getParent();
   if (parent == &parent->getParent()->getEntryBlock()) {
     instr = parent->getTerminator();
@@ -99,6 +100,7 @@ void *UnionFind::find(void *x) {
   void *root = x;
   while (root != this->id[root])
     root = this->id[root];
+
   while (x != root) {
     void *newp = this->id[x];
     this->id[x] = root;
@@ -112,7 +114,7 @@ void UnionFind::merge(void *x, void *y) {
   void *j = this->find(y);
   if (i == j)
     return;
-  // make smaller root point to larger one
+
   if (this->sz[i] < this->sz[j]) {
     this->id[i] = j, this->sz[j] += this->sz[i];
   } else {

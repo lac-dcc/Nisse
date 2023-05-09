@@ -104,12 +104,14 @@ public:
   /// \return the output stream
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Edge &e);
 
-  /// \brief Prints the number of the edge's origin and the number of its destination.
+  /// \brief Prints the number of the edge's origin and the number of its
+  /// destination.
   /// \param os Output stream
   /// \param e Edge to print
   /// \return the output stream
-  friend std::ostream& operator<<(std::ostream& os, const Edge& e);
+  friend std::ostream &operator<<(std::ostream &os, const Edge &e);
 };
+
 /// \struct UnionFind
 ///
 /// \brief Implements union-find structure for Kruskal's Maximal Spanning Tree
@@ -177,7 +179,8 @@ public:
   /// \return The return block.
   static BlockPtr findReturnBlock(llvm::Function &F);
 
-  /// \brief Returns the number corresponding to the block name give in argument (bbX -> X, bb -> 0)
+  /// \brief Returns the number corresponding to the block name give in argument
+  /// (bbX -> X, bb -> 0)
   /// \param s String to get the corresponding number of
   /// \return the corresponding number
   static std::string removebb(const std::string &s);

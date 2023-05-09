@@ -89,6 +89,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
 # available for the sub-projects.
 #===============================================================================
 add_subdirectory(lib)
+add_subdirectory(src)
 
 
 # 5. GENERATE DOXYGEN DOCUMENTATION

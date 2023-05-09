@@ -54,7 +54,8 @@ bool registerPipeline(StringRef Name, FunctionPassManager &FPM,
 
   return false;
 }
-
+/// \brief Registers the plugins for the pipelines
+/// \return The plugin info for both transformation passes
 PassPluginLibraryInfo getNissePluginInfo() {
   return {LLVM_PLUGIN_API_VERSION, "Nisse", LLVM_VERSION_STRING,
           [](PassBuilder &PB) {
@@ -72,7 +73,7 @@ PassPluginLibraryInfo getNissePluginInfo() {
           }};
 }
 
-// The public entry point for a pass plugin:
+/// \brief The public entry point for a pass plugin:
 extern "C" LLVM_ATTRIBUTE_WEAK PassPluginLibraryInfo llvmGetPassPluginInfo() {
   return getNissePluginInfo();
 }

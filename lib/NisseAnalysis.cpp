@@ -23,7 +23,6 @@
 
 #include "Nisse.h"
 #include "llvm/IR/Instructions.h"
-// #include <iostream>
 #include <fstream>
 
 using namespace llvm;
@@ -40,6 +39,14 @@ BlockPtr NisseAnalysis::findReturnBlock(llvm::Function &F) {
   }
   return nullptr;
 }
+
+string NisseAnalysis::removebb(const std::string &s) {
+  string sub = s.substr(2);
+  if (sub.size() > 0)
+    return sub;
+  return "0";
+}
+
 
 // Initialize the analysis key.
 AnalysisKey NisseAnalysis::Key;
@@ -86,26 +93,33 @@ NisseAnalysis::Result NisseAnalysis::run(llvm::Function &F,
 
   string fileName = F.getName().str() + ".graph";
 
-  errs() << "Writing '" << fileName << "'...";
+  errs() << "Writing '" << fileName << "'...\n";
 
   int blockCount = distance(F.begin(), F.end());
 
   ofstream file;
   file.open(fileName, ios::out | ios::trunc);
 
-  file << blockCount << " Basic Blocks\n";
+  file << blockCount;
   for (auto &BB: F) {
-    file << '\t' << BB.getName().str() << '\n';
+    file << ' ' << NisseAnalysis::removebb(BB.getName().str());
+  }
+  file << endl;
+
+  file << edges.size();
+  for (auto e: edges) {
+    file << '\t' << e << '\n';
   }
 
-  file << STrev.first.size() << " Edges in the Spanning Tree\n";
+  file << STrev.first.size();
   for (auto e: STrev.first) {
-    file << '\t' << e << '\n';
+    file << ' ' << e.getIndex();
   }
+  file << endl;
 
-  file << STrev.second.size() << " Instrumented Edges\n";
+  file << STrev.second.size();
   for (auto e: STrev.second) {
-    file << '\t' << e << '\n';
+    file << ' ' << e.getIndex();
   }
 
   file.close();

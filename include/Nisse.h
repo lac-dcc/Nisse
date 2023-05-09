@@ -29,7 +29,7 @@
 
 namespace nisse {
 
-/// @brief Pointer to a Basic Block
+/// \brief Pointer to a Basic Block
 using BlockPtr = llvm::BasicBlock *;
 
 /// \struct Edge
@@ -71,8 +71,8 @@ public:
   /// \return The pointer to the hook for the counter.
   llvm::Instruction *getInstrument() const;
 
-  /// @brief Getter for the edge's index.
-  /// @return the edge's index.
+  /// \brief Getter for the edge's index.
+  /// \return the edge's index.
   int getIndex() const;
 
   /// \brief Getter for the name of the edge.
@@ -97,13 +97,17 @@ public:
   /// \return true if a has higher weight than b.
   static bool compareWeights(const Edge &a, const Edge &b);
 
-  /// @brief Prints the edge name, the name of its origin, and the name of its
+  /// \brief Prints the edge name, the name of its origin, and the name of its
   /// destination.
-  /// @param os Output stream
-  /// @param dt Edge to print
-  /// @return the output stream
-  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Edge &dt);
+  /// \param os Output stream
+  /// \param e Edge to print
+  /// \return the output stream
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Edge &e);
 
+  /// \brief Prints the number of the edge's origin and the number of its destination.
+  /// \param os Output stream
+  /// \param e Edge to print
+  /// \return the output stream
   friend std::ostream& operator<<(std::ostream& os, const Edge& e);
 };
 /// \struct UnionFind
@@ -145,7 +149,7 @@ public:
 /// \see Edge, UnionFind
 struct NisseAnalysis : public llvm::AnalysisInfoMixin<NisseAnalysis> {
 
-  /// @brief The return type of the analysis pass.
+  /// \brief The return type of the analysis pass.
   using Result = std::tuple<llvm::SmallVector<Edge>, std::multiset<Edge>,
                             std::multiset<Edge>>;
 
@@ -173,6 +177,11 @@ public:
   /// \return The return block.
   static BlockPtr findReturnBlock(llvm::Function &F);
 
+  /// \brief Returns the number corresponding to the block name give in argument (bbX -> X, bb -> 0)
+  /// \param s String to get the corresponding number of
+  /// \return the corresponding number
+  static std::string removebb(const std::string &s);
+
   /// \brief The analysis pass' run function.
   /// \param F The function to analyse.
   /// \param FAM The current FunctionAnalysisManager.
@@ -189,6 +198,7 @@ protected:
   /// \brief Inserts the initialization code, which creates a
   /// 0-initialized array of ints of size size.
   /// \param F The function to instrument.
+  /// \param reverseSTEdges Set of edges that will be instrumented.
   /// \return The instruction pointer to the assignment of the array.
   std::pair<llvm::Value *, llvm::Value *>
   insertEntryFn(llvm::Function &F, std::multiset<Edge> &reverseSTEdges);
@@ -196,16 +206,18 @@ protected:
   /// \brief Inserts an increment to the counter array.
   /// \param instruction The instruction above which to insert the increment.
   /// \param i The index of the array to increment.
-  /// \param inst The instruction pointer to the counter array.
+  /// \param counterInst The instruction pointer to the counter array.
   void insertIncrFn(llvm::Instruction *instruction, int i,
                     llvm::Value *counterInst);
 
   /// \brief Inserts a call to the function that prints the results of the
   /// counter.
   /// \param F The function begin instrumented.
-  /// \param inst The instruction pointer to the counter array.
+  /// \param counterInst The instruction pointer to the counter array.
+  /// \param indexInst The instruction pointer to the index array.
+  /// \param size The size of the counter and index arrays.
   void insertExitFn(llvm::Function &F, llvm::Value *counterInst,
-                    llvm::Value *indexInst, int i);
+                    llvm::Value *indexInst, int size);
 
 public:
   /// \brief The transformation pass' run function. Instruments the function

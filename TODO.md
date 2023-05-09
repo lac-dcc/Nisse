@@ -1,9 +1,9 @@
 - [x] Analysis Pass
 - [x] Instrumentation Pass
-- [o] Readme
+- [x] Readme
 - [ ] Copyright/License checks
 - [x] Push on github
 - [x] Label edges
-- [ ] **get full instrumentation**
+- [x] get full instrumentation
 - [x] redo algorithm (oops forgot the exit -> entrance edge)
-- [ ] **update readme for full instrumentation**
+- [x] update readme for full instrumentation

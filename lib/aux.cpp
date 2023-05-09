@@ -82,8 +82,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Edge &e) {
 }
 
 std::ostream &operator<<(std::ostream &os, const Edge &e) {
-  os << e.getName() << string(" : ") << e.getOrigin()->getName().str()
-     << string(" -> ") << e.getDest()->getName().str();
+  os << NisseAnalysis::removebb(e.getOrigin()->getName().str()) << string(" ")
+     << NisseAnalysis::removebb(e.getDest()->getName().str());
   return os;
 }
 

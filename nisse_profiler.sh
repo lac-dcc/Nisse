@@ -26,8 +26,18 @@ else
   #
   FL_NAME=$(basename $1)
   BS_NAME=$(basename $FL_NAME .c)
+  PROF_DIR=$FL_NAME.profiling
   LL_NAME="$BS_NAME.ll"
   PF_NAME="$BS_NAME.profiled.ll"
+
+  
+  # Create the profiling folder:
+  #
+  if [ -d "$PROF_DIR" ]; then
+    rm -r "$PROF_DIR"
+  fi
+  mkdir $PROF_DIR
+  cd $PROF_DIR
 
   # Pass to use:
   if [ $# -eq 2 ]
@@ -39,7 +49,7 @@ else
 
   # Generating the bytecode in SSA form:
   #
-  $LLVM_CLANG -Xclang -disable-O0-optnone -c -S -emit-llvm $FL_NAME -o $LL_NAME
+  $LLVM_CLANG -Xclang -disable-O0-optnone -c -S -emit-llvm ../$FL_NAME -o $LL_NAME
   $LLVM_OPT -S -passes="mem2reg,instnamer,break-crit-edges" $LL_NAME -o $LL_NAME
 
   # Running the pass:

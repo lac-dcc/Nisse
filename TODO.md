@@ -7,3 +7,9 @@
 - [x] get full instrumentation
 - [x] redo algorithm
 - [x] update readme for full instrumentation
+- [ ] write tests
+- [ ] improve readme (complete tutorial)
+- [ ] source file
+- [ ] wait for code review
+
+- [ ] loop analysis

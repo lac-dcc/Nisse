@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 
 # Example:
 # ./mem_profiler.sh ../../tests/simple_array.c
@@ -10,12 +10,13 @@ then
 else
   # LLVM tools:
   #
-  PROG_HOME=~/Stage
-  LLVM_INSTALL_DIR=$PROG_HOME/llvm-project/build
+  source ./config.sh
+
   LLVM_OPT=$LLVM_INSTALL_DIR/bin/opt
   LLVM_CLANG=$LLVM_INSTALL_DIR/bin/clang
-  MY_LLVM_LIB=$PROG_HOME/Nisse/build/lib/libNisse.so
-  PROFILER_IMPL=$PROG_HOME/Nisse/lib/prof.c
+  PROFILER_IMPL=$SOURCE_DIR/lib/prof.c
+  MY_LLVM_LIB=$BUILD_DIR/lib/libNisse.so
+  PROP_BIN=$BUILD_DIR/bin/propagation
 
   # Move to folder where the file is:
   #
@@ -43,8 +44,10 @@ else
   if [ $# -eq 2 ]
   then
     PASS="print<nisse>"
+    PROP_FLAG="-d -s"
   else
     PASS="nisse"
+    PROP_FLAG="-s"
   fi
 
   # Generating the bytecode in SSA form:
@@ -65,6 +68,31 @@ else
   # Run the instrumented binary:
   #
   ./$BS_NAME
+
+  # Prepare the result folders
+  #
+  mkdir graphs profiles compiled partial_profiles
+
+  # Propagate the weights for each function:
+  #
+  for i in *.prof; do
+    PROF_NAME="$i.full"
+    $PROP_BIN $i $PROP_FLAG -o $PROF_NAME
+    mv $i partial_profiles/
+    mv $PROF_NAME profiles/
+  done
+
+  # Move the files to apropriate folders
+  #
+  for i in *.graph; do
+    mv $i graphs/
+  done
+
+  for i in *.ll; do
+    mv $i compiled/
+  done
+
+  mv $BS_NAME compiled/
 
   # Go back to the folder where you were before:
   #

@@ -9,7 +9,7 @@
 - [x] update readme for full instrumentation
 - [ ] write tests
 - [ ] improve readme (complete tutorial)
-- [ ] source file
+- [x] source file (+ propagation done in bash script)
 - [ ] wait for code review
 
 - [ ] loop analysis

@@ -245,7 +245,7 @@ void outputCout(vpi &edges, vi &weights) {
 /// \param weights The edge's weights.
 void outputFile(string filename, vpi &edges, vi &weights) {
   ofstream file;
-  file.open(filename, ios::out | ios::trunc);
+  file.open(filename, ios::out | ios::app);
 
   if (file.bad()) {
     cout << "Could not open file " << filename << endl;
@@ -278,42 +278,55 @@ int main(int argc, char **argv) {
       "s", cl::desc("Do separate profilings for each function execution"));
 
   cl::ParseCommandLineOptions(argc, argv);
-  ifstream graph;
-  graph.open(InputFilename + ".graph");
   vi vertex;
   vpi edges;
   si ST, revST;
   msi in, out;
   vvi weights;
 
-  if (Debug) {
-    cout << "\nComputing the graph\n\n";
+  int period = InputFilename.find_last_of('.');
+  int slash = InputFilename.find_last_of('/');
+  string input;
+  if (period > slash) {
+    input = InputFilename.substr(0, period);
+  } else {
+    input = InputFilename.getValue();
   }
 
-  initGraph(InputFilename, vertex, edges, ST, revST, in, out, Debug);
+  if (Debug) {
+    cout << "\nComputing the graph of " << input << "\n\n";
+  }
+
+  initGraph(input, vertex, edges, ST, revST, in, out, Debug);
 
   if (Debug) {
     cout << "\nComputing the input weights\n\n";
   }
 
   if (Separate) {
-    weights =
-        initWeightsSeparate(InputFilename, edges.size(), revST.size(), Debug);
+    weights = initWeightsSeparate(input, edges.size(), revST.size(), Debug);
   } else {
-    weights.push_back(
-        initWeights(InputFilename, edges.size(), revST.size(), Debug));
+    weights.push_back(initWeights(input, edges.size(), revST.size(), Debug));
   }
 
   if (Debug) {
     cout << "\nPropagating the weights\n\n";
   }
-
+  bool to_print = true;
   for (auto w : weights) {
     propagation(edges, ST, in, out, w, 0);
 
     if (OutputFilename.size() > 0) {
+      if (to_print) {
+        cout << "Writing '" << OutputFilename << "'...\n";
+        to_print = false;
+      }
       outputFile(OutputFilename, edges, w);
     } else {
+      if (to_print) {
+        cout << "Printing the weigths of '" << input << "'...\n";
+        to_print = false;
+      }
       outputCout(edges, w);
     }
   }

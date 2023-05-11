@@ -24,6 +24,8 @@
 #ifndef BALL_H
 #define BALL_H
 
+#include "llvm/Analysis/LoopAnalysisManager.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/PassManager.h"
 #include <map>
 
@@ -170,9 +172,9 @@ private:
   generateSTrev(llvm::Function &F, llvm::SmallVector<Edge> &edges);
 
 public:
-  static llvm::AnalysisKey
-      Key; ///< A special type used by analysis passes to provide an address
-           ///< that identifies that particular analysis pass type.
+  /// \brief A special type used by analysis passes to provide an address that
+  /// identifies that particular analysis pass type.
+  static llvm::AnalysisKey Key;
 
   /// \brief Find the return block of a function.
   /// \param F The function to find the return block of.
@@ -253,6 +255,29 @@ public:
   /// \return ¯\_ (ツ)_/¯
   llvm::PreservedAnalyses run(llvm::Function &F,
                               llvm::FunctionAnalysisManager &FAM);
+};
+
+/// \struct NisseLoopAnalysis
+///
+/// \brief Identifies well-founded loops and returns the information to
+/// instrument them.
+struct NisseLoopAnalysis : public llvm::AnalysisInfoMixin<NisseLoopAnalysis> {
+
+  /// \brief The return type of the analysis pass.
+  using Result = std::tuple<llvm::PHINode *, BlockPtr,
+                            llvm::SmallVector<std::pair<BlockPtr, BlockPtr>>>;
+
+public:
+  /// \brief A special type used by analysis passes to provide an address that
+  /// identifies that particular analysis pass type.
+  static llvm::AnalysisKey Key;
+
+  /// \brief Identifies Well-founded loops.
+  /// \param L The loop to transform.
+  /// \param LAM The current LoopAnalysisManager.
+  /// \return the PHINode pointer to the induction variable, the BackEdge
+  /// pointer and the outgoing edges.
+  Result run(llvm::Loop &L, llvm::LoopAnalysisManager &LAM);
 };
 
 } // namespace nisse

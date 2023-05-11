@@ -104,6 +104,15 @@ PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
   auto &reverseSTEdges = get<2>(edges);
   int size = reverseSTEdges.size();
 
+  // LoopInfoWrapperPass p;
+  // bool f;
+  // LoopInfo LI = p.getAnalysis(F, nullptr).getLoopInfo();
+
+  // LoopInfo &LI = p.getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  // for (LoopInfo::iterator i = LI.begin(), e = LI.end(); i != e; ++i) {
+  //   errs() << "Loop" << (*i)->getName() << '\n';
+  // }
+
   auto pInst = this->insertEntryFn(F, reverseSTEdges);
   auto counterInst = pInst.first;
   auto indexInst = pInst.second;

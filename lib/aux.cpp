@@ -17,7 +17,7 @@
 ///
 /// \file
 /// This file contains the implementation of the Edge and UnionFind
-/// (Auxilliary classes for the pass)
+/// (Auxiliary classes for the pass)
 ///
 //===----------------------------------------------------------------------===//
 

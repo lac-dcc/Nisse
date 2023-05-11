@@ -22,8 +22,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "Nisse.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopPass.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/Pass.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include <fstream>
+
+// #include "iostream"
+// #include "llvm/Analysis/LoopInfo.h"
+// #include "llvm/IR/Function.h"
+// #include "llvm/IR/InstIterator.h"
+// #include "llvm/IR/Instructions.h"
+// #include "llvm/IR/LegacyPassManager.h"
+// #include "llvm/Pass.h"
+// #include "llvm/Support/raw_ostream.h"
+// #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 using namespace llvm;
 using namespace std;
@@ -87,6 +102,12 @@ NisseAnalysis::generateSTrev(Function &F, SmallVector<Edge> &edges) {
 
 NisseAnalysis::Result NisseAnalysis::run(llvm::Function &F,
                                          llvm::FunctionAnalysisManager &FAM) {
+
+  // LoopAnalysisManager LAM;
+  // LAM.registerPass([] { return LoopInfoWrapperPass(); });
+
+  DominatorTree DT(F);
+  LoopInfo LI(DT);
 
   auto edges = this->generateEdges(F);
   auto STrev = this->generateSTrev(F, edges);

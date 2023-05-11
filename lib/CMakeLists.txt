@@ -6,6 +6,7 @@ add_library(Nisse MODULE
     NisseAnalysis.cpp
     NissePlugin.cpp
     aux.cpp)
+    #NisseLoopAnalysis.cpp)
 
 target_include_directories(Nisse PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/../include")

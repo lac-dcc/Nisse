@@ -17,19 +17,21 @@ make
 We provide a bash script to run our passes, which can be invoked as follows:
 
 ```bash
-sh nisse_profiler.sh <path/to/file.c>
+bash nisse_profiler.sh <path/to/file.c>
 ```
 
-This basic command will create, in the current folder, the following files:
+It also requires to configure the file `config.sh`.
 
- * `file.ll` an IR file modified by the following LLVM passes: mem2reg, instnamer, and break-crit-edges.
- * `file.profiled.ll` an IR file instrumented with Ball-Larus counters.
- * `file` an executable file compiled from `file.profiled.ll`.
+LLVM_INSTALL_DIR is the path to the build directory of llvm.
+SOURCE_DIR is the path to this folder.
 
-# Printing Debugging Data
-To print edges, spanning tree and the complement of the spanning tree, just
-append an extra argument to the `niss_profiler.sh` script, as follows:
-
-```bash
-sh nisse_profiler.sh <path/to/file.c> <sth>
-```
+This basic command will create a folder `file.c.profiling`.
+In that folder are 5 subfolders:
+* `compiled` contains 3 files:
+  *  `file.ll` an IR file modified by the following LLVM passes: mem2reg, and instnamer.
+  *  `file.profiled.ll` an IR file instrumented with Ball-Larus counters.
+  *  `file` an executable file compiled from `file.profiled.ll`.
+* `profiles` contains the complete profile for each function. By default, if a function is called multiple times, the profile will contain the total execution. Adding an an extra argument to the `niss_profiler.sh` script generates a separate profile for each execution instead.
+* `partial_profiles` contains the profile data obtained by the instrumentation for each function.
+* `graphs` contains the vertices, edges, spanning tree and instrumented edges of each function's CFG.
+* `dot` contains a `dot` file with the representation of each function's CFG.

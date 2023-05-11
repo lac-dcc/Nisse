@@ -7,9 +7,12 @@
 - [x] get full instrumentation
 - [x] redo algorithm
 - [x] update readme for full instrumentation
-- [ ] write tests
-- [ ] improve readme (complete tutorial)
+- [x] write tests
+- [x] improve readme (complete tutorial)
+- [x] improve readme (detail script function)
 - [x] source file (+ propagation done in bash script)
-- [ ] wait for code review
+- [x] wait for code review
+- [x] Call break crit edge in pass
+- [x] Remove NissePassPrint
 
 - [ ] loop analysis

@@ -40,25 +40,20 @@ else
   mkdir $PROF_DIR
   cd $PROF_DIR
 
-  # Pass to use:
-  if [ $# -eq 2 ]
-  then
-    PASS="print<nisse>"
-    PROP_FLAG="-d -s"
-  else
-    PASS="nisse"
-    PROP_FLAG="-s"
-  fi
-
   # Generating the bytecode in SSA form:
   #
   $LLVM_CLANG -Xclang -disable-O0-optnone -c -S -emit-llvm ../$FL_NAME -o $LL_NAME
-  $LLVM_OPT -S -passes="mem2reg,instnamer,break-crit-edges" $LL_NAME -o $LL_NAME
+  $LLVM_OPT -S -passes="mem2reg,instnamer" $LL_NAME -o $LL_NAME
 
   # Running the pass:
   #
-  $LLVM_OPT -S -load-pass-plugin $MY_LLVM_LIB -passes=$PASS -stats \
+  $LLVM_OPT -S -load-pass-plugin $MY_LLVM_LIB -passes="nisse" -stats \
      $LL_NAME -o $PF_NAME
+  
+  # Print the instrumented CFG
+  #
+  $LLVM_OPT -S -passes="dot-cfg" -stats \
+     $PF_NAME -o $PF_NAME
 
   # Compile the newly instrumented program, and link it against the profiler.
   # We are passing -no_pie to disable address space layout randomization:
@@ -71,7 +66,16 @@ else
 
   # Prepare the result folders
   #
-  mkdir graphs profiles compiled partial_profiles
+  mkdir graphs profiles compiled partial_profiles dot
+
+  # Propagation Flags to use:
+  #
+  if [ $# -eq 2 ]
+  then
+    PROP_FLAG="-s"
+  else
+    PROP_FLAG=""
+  fi
 
   # Propagate the weights for each function:
   #
@@ -84,6 +88,10 @@ else
 
   # Move the files to apropriate folders
   #
+  for i in .*.dot; do
+    mv $i dot/
+  done
+
   for i in *.graph; do
     mv $i graphs/
   done

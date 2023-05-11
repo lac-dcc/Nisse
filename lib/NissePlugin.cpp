@@ -24,6 +24,7 @@
 #include "Nisse.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
+#include "llvm/Transforms/Utils/BreakCriticalEdges.h"
 
 using namespace llvm;
 
@@ -43,12 +44,8 @@ bool registerPipeline(StringRef Name, FunctionPassManager &FPM,
                       ArrayRef<PassBuilder::PipelineElement>) {
 
   if (Name == "nisse") {
+    FPM.addPass(BreakCriticalEdgesPass());
     FPM.addPass(nisse::NissePass());
-    return true;
-  }
-
-  if (Name == "print<nisse>") {
-    FPM.addPass(nisse::NissePassPrint(errs()));
     return true;
   }
 

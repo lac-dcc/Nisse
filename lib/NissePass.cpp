@@ -100,6 +100,7 @@ void NissePass::insertExitFn(llvm::Function &F, llvm::Value *counterInst,
 }
 
 PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
+
   auto &edges = FAM.getResult<NisseAnalysis>(F);
   auto &reverseSTEdges = get<2>(edges);
   int size = reverseSTEdges.size();
@@ -110,50 +111,11 @@ PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
 
   int i = 0;
   for (auto p : reverseSTEdges) {
-    this->insertIncrFn(p.getInstrument(), i++, counterInst);
+    this->insertIncrFn(p.getInstrumentationPoint(), i++, counterInst);
   }
 
   this->insertExitFn(F, counterInst, indexInst, size);
 
   return PreservedAnalyses::all();
 }
-
-PreservedAnalyses NissePassPrint::run(Function &F,
-                                      FunctionAnalysisManager &FAM) {
-  auto &edges = FAM.getResult<NisseAnalysis>(F);
-  auto &reverseSTEdges = get<2>(edges);
-  int size = reverseSTEdges.size();
-
-  OS << "\n" << F.getName() << "\n\tEdges:\n";
-
-  for (auto p : get<0>(edges)) {
-    OS << "\t\t" << p << "\n";
-  }
-
-  OS << "\tSpanning Tree:\n";
-
-  for (auto p : get<1>(edges)) {
-    OS << "\t\t" << p << "\n";
-  }
-
-  OS << "\tInstrumented edges:\n";
-
-  for (auto p : reverseSTEdges) {
-    OS << "\t\t" << p << "\n";
-  }
-
-  auto pInst = this->insertEntryFn(F, reverseSTEdges);
-  auto counterInst = pInst.first;
-  auto indexInst = pInst.second;
-
-  int i = 0;
-  for (auto p : reverseSTEdges) {
-    this->insertIncrFn(p.getInstrument(), i++, counterInst);
-  }
-
-  this->insertExitFn(F, counterInst, indexInst, size);
-
-  return PreservedAnalyses::all();
-}
-
 } // namespace nisse

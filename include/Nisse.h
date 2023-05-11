@@ -38,11 +38,10 @@ using BlockPtr = llvm::BasicBlock *;
 ///
 struct Edge {
 private:
-  BlockPtr origin;  ///< The origin of the edge.
-  BlockPtr dest;    ///< The destination of the edge.
-  int index;        ///< Index of the edge.
-  int weight;       ///< An expectation of how often this edge will be executed.
-  std::string name; ///< User-defined edge name, for debugging purposes.
+  const BlockPtr origin; ///< The origin of the edge.
+  const BlockPtr dest;   ///< The destination of the edge.
+  const int index;       ///< Index of the edge.
+  const int weight; ///< An expectation of how often this edge will be executed.
 
 public:
   /// \brief Default constructor for Edge.
@@ -51,9 +50,8 @@ public:
   /// \param index An index for the edge.
   /// \param weight (optional) An expectation of how often the edge will be
   /// executed.
-  /// \param name (optional) User-defined edge name.
-  Edge(BlockPtr origin, BlockPtr dest, int index, int weight = 1,
-       std::string name = "");
+  Edge(BlockPtr origin, BlockPtr dest, int index, int weight = 1)
+      : origin(origin), dest(dest), index(index), weight(weight){};
 
   /// \brief Getter for the destination of the edge.
   /// \return The destination of the edge.
@@ -69,7 +67,7 @@ public:
   /// destination block. If the hooked block is the entry block, the counter
   /// will always be placed at the end of the block.
   /// \return The pointer to the hook for the counter.
-  llvm::Instruction *getInstrument() const;
+  llvm::Instruction *getInstrumentationPoint() const;
 
   /// \brief Getter for the edge's index.
   /// \return the edge's index.
@@ -84,7 +82,7 @@ public:
   /// \param e Edge to compare the current edge to.
   /// \return true if the current edge and e have the same origins and
   /// destinations.
-  bool equals(const Edge &e) const;
+  bool operator=(const Edge &e) const;
 
   /// \brief Compares the weight of two edges.
   /// \param e Edge to compare the current edge to.
@@ -225,29 +223,6 @@ protected:
 public:
   /// \brief The transformation pass' run function. Instruments the function
   /// given as argument for Ball-Larus edge instrumentation.
-  /// \param F The function to transform.
-  /// \param FAM The current FunctionAnalysisManager.
-  /// \return ¯\_ (ツ)_/¯
-  llvm::PreservedAnalyses run(llvm::Function &F,
-                              llvm::FunctionAnalysisManager &FAM);
-};
-
-/// \struct NissePassPrint
-///
-/// \brief Instruments a function for Ball-Larus edge instrumentation and prints
-/// its edges, maximum spanning tree, and the instrumented edges.
-struct NissePassPrint : public NissePass {
-private:
-  llvm::raw_ostream &OS; ///< Output stream for the pass.
-
-public:
-  /// \brief Constructor for the pass.
-  /// \param OS Output stream for the pass.
-  explicit NissePassPrint(llvm::raw_ostream &OS) : OS(OS) {}
-
-  /// \brief The transformation pass' run function. Instruments the function
-  /// give as argument for Ball-Larus edge instrumentation and prints the
-  /// functions edges, spanning tree, and instrumented edges.
   /// \param F The function to transform.
   /// \param FAM The current FunctionAnalysisManager.
   /// \return ¯\_ (ツ)_/¯

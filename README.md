@@ -31,7 +31,9 @@ In that folder are 5 subfolders:
   *  `file.ll` an IR file modified by the following LLVM passes: mem2reg, and instnamer.
   *  `file.profiled.ll` an IR file instrumented with Ball-Larus counters.
   *  `file` an executable file compiled from `file.profiled.ll`.
-* `profiles` contains the complete profile for each function. By default, if a function is called multiple times, the profile will contain the total execution. Adding an an extra argument to the `niss_profiler.sh` script generates a separate profile for each execution instead.
+* `profiles` contains the complete profile for each function. By default, if a function is called multiple times, the profile will contain the total execution. Adding an an extra argument to the `nisse_profiler.sh` script generates a separate profile for each execution instead.
 * `partial_profiles` contains the profile data obtained by the instrumentation for each function.
 * `graphs` contains the vertices, edges, spanning tree and instrumented edges of each function's CFG.
 * `dot` contains a `dot` file with the representation of each function's CFG.
+
+Functions with no branches are not instrumented (since their execution is always linear).

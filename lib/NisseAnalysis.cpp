@@ -24,6 +24,7 @@
 #include "Nisse.h"
 #include "llvm/IR/Instructions.h"
 #include <fstream>
+#include <regex>
 
 using namespace llvm;
 using namespace std;
@@ -41,7 +42,7 @@ BlockPtr NisseAnalysis::findReturnBlock(llvm::Function &F) {
 }
 
 string NisseAnalysis::removebb(const std::string &s) {
-  string sub = s.substr(2);
+  string sub = regex_replace(s, regex(R"([\D])"), "");
   if (sub.size() > 0)
     return sub;
   return "0";

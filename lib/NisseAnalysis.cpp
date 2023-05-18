@@ -29,6 +29,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include <fstream>
+#include <regex>
 
 // #include "iostream"
 // #include "llvm/Analysis/LoopInfo.h"
@@ -56,7 +57,7 @@ BlockPtr NisseAnalysis::findReturnBlock(llvm::Function &F) {
 }
 
 string NisseAnalysis::removebb(const std::string &s) {
-  string sub = s.substr(2);
+  string sub = regex_replace(s, regex(R"([\D])"), "");
   if (sub.size() > 0)
     return sub;
   return "0";

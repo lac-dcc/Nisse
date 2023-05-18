@@ -30,19 +30,11 @@ namespace nisse {
 
 // Implementation of Edge
 
-Edge::Edge(BlockPtr origin, BlockPtr dest, int index, int weight, string name) {
-  this->origin = origin;
-  this->dest = dest;
-  this->index = index;
-  this->weight = weight;
-  this->name = name;
-}
-
 BlockPtr Edge::getOrigin() const { return this->origin; }
 
 BlockPtr Edge::getDest() const { return this->dest; }
 
-Instruction *Edge::getInstrument() const {
+Instruction *Edge::getInstrumentationPoint() const {
   Instruction *instr;
   if (this->origin->getUniqueSuccessor() == this->dest) {
     instr = this->origin->getTerminator();
@@ -60,21 +52,19 @@ Instruction *Edge::getInstrument() const {
 int Edge::getIndex() const { return this->index; }
 
 string Edge::getName() const {
-  if (this->name.length() > 0) {
-    return this->name;
-  }
+  // if (this->name.length() > 0) {
+  //   return this->name;
+  // }
   return to_string(this->index);
 }
 
-bool Edge::equals(const Edge &e) const {
+bool Edge::operator=(const Edge &e) const {
   return this->origin == e.origin && this->dest == e.dest;
 }
 
 bool Edge::operator<(const Edge &e) const { return this->weight < e.weight; }
 
-bool Edge::compareWeights(const Edge &a, const Edge &b) {
-  return a.weight > b.weight;
-}
+bool Edge::compareWeights(const Edge &a, const Edge &b) { return b < a; }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Edge &e) {
   os << e.getName() << " : " << e.getOrigin()->getName() << " -> "

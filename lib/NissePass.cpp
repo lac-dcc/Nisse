@@ -100,55 +100,14 @@ void NissePass::insertExitFn(llvm::Function &F, llvm::Value *counterInst,
 }
 
 PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
+
   auto &edges = FAM.getResult<NisseAnalysis>(F);
   auto &reverseSTEdges = get<2>(edges);
   int size = reverseSTEdges.size();
 
-  // LoopInfoWrapperPass p;
-  // bool f;
-  // LoopInfo LI = p.getAnalysis(F, nullptr).getLoopInfo();
-
-  // LoopInfo &LI = p.getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  // for (LoopInfo::iterator i = LI.begin(), e = LI.end(); i != e; ++i) {
-  //   errs() << "Loop" << (*i)->getName() << '\n';
-  // }
-
-  auto pInst = this->insertEntryFn(F, reverseSTEdges);
-  auto counterInst = pInst.first;
-  auto indexInst = pInst.second;
-
-  int i = 0;
-  for (auto p : reverseSTEdges) {
-    this->insertIncrFn(p.getInstrument(), i++, counterInst);
-  }
-
-  this->insertExitFn(F, counterInst, indexInst, size);
-
-  return PreservedAnalyses::all();
-}
-
-PreservedAnalyses NissePassPrint::run(Function &F,
-                                      FunctionAnalysisManager &FAM) {
-  auto &edges = FAM.getResult<NisseAnalysis>(F);
-  auto &reverseSTEdges = get<2>(edges);
-  int size = reverseSTEdges.size();
-
-  OS << "\n" << F.getName() << "\n\tEdges:\n";
-
-  for (auto p : get<0>(edges)) {
-    OS << "\t\t" << p << "\n";
-  }
-
-  OS << "\tSpanning Tree:\n";
-
-  for (auto p : get<1>(edges)) {
-    OS << "\t\t" << p << "\n";
-  }
-
-  OS << "\tInstrumented edges:\n";
-
-  for (auto p : reverseSTEdges) {
-    OS << "\t\t" << p << "\n";
+  if (size == 1) {
+    errs() << "Function '" << F.getName() << "' has only 1 edge to instrument. Skipping...\n";
+    return PreservedAnalyses::all();
   }
 
   auto pInst = this->insertEntryFn(F, reverseSTEdges);
@@ -157,12 +116,11 @@ PreservedAnalyses NissePassPrint::run(Function &F,
 
   int i = 0;
   for (auto p : reverseSTEdges) {
-    this->insertIncrFn(p.getInstrument(), i++, counterInst);
+    this->insertIncrFn(p.getInstrumentationPoint(), i++, counterInst);
   }
 
   this->insertExitFn(F, counterInst, indexInst, size);
 
   return PreservedAnalyses::all();
 }
-
 } // namespace nisse

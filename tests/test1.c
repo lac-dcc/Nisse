@@ -7,7 +7,7 @@ int test1() {
         return x;
     }
   }
-  return x;
+  return 3;
 }
 
 int test2(int x) {

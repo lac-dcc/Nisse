@@ -34,7 +34,18 @@ BlockPtr Edge::getOrigin() const { return this->origin; }
 
 BlockPtr Edge::getDest() const { return this->dest; }
 
+void Edge::setWeight(int weight) { this->weight = weight; }
+
+void Edge::setWellFoundedValues(llvm::Value *indVar, llvm::Instruction *instr,
+                                const llvm::APInt *incrVal) {
+  this->indVar = indVar;
+  this->instr = instr;
+  this->incrVal = incrVal;
+}
+
 Instruction *Edge::getInstrumentationPoint() const {
+  if (this->instr != nullptr)
+    return this->instr;
   Instruction *instr;
   if (this->origin->getUniqueSuccessor() == this->dest) {
     instr = this->origin->getTerminator();
@@ -49,16 +60,36 @@ Instruction *Edge::getInstrumentationPoint() const {
   return instr;
 }
 
-int Edge::getIndex() const { return this->index; }
-
-string Edge::getName() const {
-  // if (this->name.length() > 0) {
-  //   return this->name;
-  // }
-  return to_string(this->index);
+llvm::Value *Edge::getInductionVariable(llvm::IRBuilder<> &builder) const {
+  if (this->indVar != nullptr)
+    return this->indVar;
+  return builder.getInt32(1);
 }
 
-bool Edge::operator=(const Edge &e) const {
+void Edge::insertSimpleIncrFn(int i, Value *inst) {
+  auto instruction = this->getInstrumentationPoint();
+  IRBuilder<> builder(instruction);
+  auto *I = builder.getInt32Ty();
+  Value *indexList[] = {builder.getInt32(i)};
+  Value *incr = builder.getInt32(1);
+  auto inst1 = builder.CreateGEP(I, inst, indexList);
+  auto inst2 = builder.CreateLoad(I, inst1);
+  auto inst3 = builder.CreateAdd(inst2, incr);
+  builder.CreateStore(inst3, inst1);
+}
+
+void Edge::insertIncrFn(int i, Value *inst) {
+  if (this->indVar != nullptr)
+    this->insertLoopIncrFn(i, inst);
+  else
+    this->insertLoopIncrFn(i, inst);
+}
+
+int Edge::getIndex() const { return this->index; }
+
+string Edge::getName() const { return to_string(this->index); }
+
+bool Edge::operator==(const Edge &e) const {
   return this->origin == e.origin && this->dest == e.dest;
 }
 

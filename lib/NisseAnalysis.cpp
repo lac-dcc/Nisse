@@ -24,22 +24,12 @@
 #include "Nisse.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include <fstream>
 #include <regex>
-
-// #include "iostream"
-// #include "llvm/Analysis/LoopInfo.h"
-// #include "llvm/IR/Function.h"
-// #include "llvm/IR/InstIterator.h"
-// #include "llvm/IR/Instructions.h"
-// #include "llvm/IR/LegacyPassManager.h"
-// #include "llvm/Pass.h"
-// #include "llvm/Support/raw_ostream.h"
-// #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 using namespace llvm;
 using namespace std;
@@ -101,16 +91,62 @@ NisseAnalysis::generateSTrev(Function &F, SmallVector<Edge> &edges) {
   return pair(ST, rev);
 }
 
+void NisseAnalysis::identifyInductionVariables(Loop *L, ScalarEvolution &SE,
+                                               SmallVector<Edge> edges) const {
+  for (auto *BB : L->getBlocks()) {
+    for (auto &Inst : *BB) {
+      if (auto *PHI = dyn_cast<llvm::PHINode>(&Inst)) {
+        const llvm::SCEV *SCEV = SE.getSCEV(PHI);
+        if (SE.containsAddRecurrence(SCEV)) {
+          const llvm::SCEVAddRecExpr *AddRecExpr =
+              cast<llvm::SCEVAddRecExpr>(SCEV);
+          if (AddRecExpr->isAffine()) {
+            // Affine induction variable found
+            llvm::Value *IndVar = PHI;
+            const llvm::SCEV *IncrementSCEV = AddRecExpr->getStepRecurrence(SE);
+            const llvm::APInt *IncrementValue =
+                &cast<llvm::SCEVConstant>(IncrementSCEV)
+                     ->getValue()
+                     ->getValue();
+            BlockPtr incomingBlock, backBlock;
+            L->getIncomingAndBackEdge(incomingBlock, backBlock);
+            BlockPtr exitBlock = L->getExitBlock();
+            Edge tmpEdge(backBlock, incomingBlock, -1);
+            for (auto e : edges) {
+              if (e == tmpEdge) {
+                errs() << "loop instrumenting\n";
+                e.setWeight(0);
+                e.setWellFoundedValues(
+                    IndVar, &*exitBlock->getFirstInsertionPt(), IncrementValue);
+                break;
+              }
+            }
+            llvm::errs() << "Induction Variable: " << *IndVar << "\n";
+            llvm::errs() << "Increment Value: " << IncrementValue << "\n";
+          }
+        }
+      }
+    }
+  }
+}
+
 NisseAnalysis::Result NisseAnalysis::run(llvm::Function &F,
                                          llvm::FunctionAnalysisManager &FAM) {
 
-  // LoopAnalysisManager LAM;
-  // LAM.registerPass([] { return LoopInfoWrapperPass(); });
+  auto edges = this->generateEdges(F);
 
   DominatorTree DT(F);
   LoopInfo LI(DT);
+  auto loops = LI.getLoopsInPreorder();
 
-  auto edges = this->generateEdges(F);
+  llvm::ScalarEvolution &SE = FAM.getResult<llvm::ScalarEvolutionAnalysis>(F);
+  // auto &SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+  errs() << loops.size() << "\n";
+
+  for (auto loop : loops) {
+    identifyInductionVariables(loop, SE, edges);
+  }
+
   auto STrev = this->generateSTrev(F, edges);
 
   string fileName = F.getName().str() + ".graph";

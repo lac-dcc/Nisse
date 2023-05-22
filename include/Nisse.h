@@ -26,6 +26,7 @@
 
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PassManager.h"
 #include <map>
 
@@ -40,10 +41,16 @@ using BlockPtr = llvm::BasicBlock *;
 ///
 struct Edge {
 private:
-  const BlockPtr origin; ///< The origin of the edge.
-  const BlockPtr dest;   ///< The destination of the edge.
-  const int index;       ///< Index of the edge.
-  const int weight; ///< An expectation of how often this edge will be executed.
+  BlockPtr origin; ///< The origin of the edge.
+  BlockPtr dest;   ///< The destination of the edge.
+  int index;       ///< Index of the edge.
+  int weight;      ///< An expectation of how often this edge will be executed.
+  llvm::Value
+      *indVar; ///< User defined increment value (for well-founded loops).
+  llvm::Instruction
+      *instr; ///< User defined instrumentation point (for well-founded loops).
+  const llvm::APInt *incrVal; ///< User defined increment value (for
+                              ///< well-founded loops).
 
 public:
   /// \brief Default constructor for Edge.
@@ -53,7 +60,8 @@ public:
   /// \param weight (optional) An expectation of how often the edge will be
   /// executed.
   Edge(BlockPtr origin, BlockPtr dest, int index, int weight = 1)
-      : origin(origin), dest(dest), index(index), weight(weight){};
+      : origin(origin), dest(dest), index(index), weight(weight),
+        indVar(nullptr), instr(nullptr){};
 
   /// \brief Getter for the destination of the edge.
   /// \return The destination of the edge.
@@ -63,6 +71,21 @@ public:
   /// \return The destination of the edge.
   BlockPtr getDest() const;
 
+  /// @brief Setter for the weight of the edge.
+  /// @param weight The weight of the edge.
+  void setWeight(int weight);
+
+  void setWellFoundedValues(llvm::Value *indVar, llvm::Instruction *instr,
+                            const llvm::APInt *incrVal);
+
+  // /// @brief Setter for the induction variable of the edge.
+  // /// @param var The induction variable of the edge.
+  // void setInductionVariable(llvm::Value *var);
+
+  // /// @brief Setter for the instrumentation point of the edge.
+  // /// @param instr The instrumentation point of the edge.
+  // void setInstrumentationPoint(llvm::Instruction *instr);
+
   /// \brief Computes the hook to insert the Ball-Larus counter.
   /// If the source block terminates with an absolute jump, the counter is
   /// placed at the end of that block. If not, it is placed at the start of the
@@ -70,6 +93,19 @@ public:
   /// will always be placed at the end of the block.
   /// \return The pointer to the hook for the counter.
   llvm::Instruction *getInstrumentationPoint() const;
+
+  /// @brief Computes the value to increment the edge's counter by.
+  /// If it is a well-founded loop's return edge, returns the loop's
+  /// incrementation variable. (The loop's outgoing edge is instrumented.)
+  /// @param builder The builder used to insert the instructions.
+  /// @return The value to increment the edge's counter by.
+  llvm::Value *getInductionVariable(llvm::IRBuilder<> &builder) const;
+
+  void insertSimpleIncrFn(int i, llvm::Value *inst);
+
+  void insertLoopIncrFn(int i, llvm::Value *inst);
+
+  void insertIncrFn(int i, llvm::Value *inst);
 
   /// \brief Getter for the edge's index.
   /// \return the edge's index.
@@ -84,7 +120,7 @@ public:
   /// \param e Edge to compare the current edge to.
   /// \return true if the current edge and e have the same origins and
   /// destinations.
-  bool operator=(const Edge &e) const;
+  bool operator==(const Edge &e) const;
 
   /// \brief Compares the weight of two edges.
   /// \param e Edge to compare the current edge to.
@@ -169,6 +205,9 @@ private:
   std::pair<std::multiset<Edge>, std::multiset<Edge>>
   generateSTrev(llvm::Function &F, llvm::SmallVector<Edge> &edges);
 
+  void identifyInductionVariables(llvm::Loop *L, llvm::ScalarEvolution &SE,
+                                  llvm::SmallVector<Edge>) const;
+
 public:
   /// \brief A special type used by analysis passes to provide an address that
   /// identifies that particular analysis pass type.
@@ -210,8 +249,7 @@ protected:
   /// \param instruction The instruction above which to insert the increment.
   /// \param i The index of the array to increment.
   /// \param counterInst The instruction pointer to the counter array.
-  void insertIncrFn(llvm::Instruction *instruction, int i,
-                    llvm::Value *counterInst);
+  void insertIncrFn(Edge &edge, int i, llvm::Value *counterInst);
 
   /// \brief Inserts a call to the function that prints the results of the
   /// counter.

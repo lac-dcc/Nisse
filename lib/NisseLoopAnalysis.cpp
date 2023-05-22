@@ -26,17 +26,17 @@
 using namespace llvm;
 using namespace std;
 
-namespace nisse {
-NisseLoopAnalysis::Result NisseLoopAnalysis::run(Loop &L,
-                                                 LoopAnalysisManager &LAM) {
-  auto P = L.getCanonicalInductionVariable();
-  BlockPtr Incoming, BackEdge;
-  if (!L.getIncomingAndBackEdge(Incoming, BackEdge)) {
-    BackEdge = nullptr;
-  }
-  SmallVector<pair<BlockPtr, BlockPtr>> ExitEdges;
-  L.getExitEdges(ExitEdges);
+// namespace nisse {
+// NisseLoopAnalysis::Result NisseLoopAnalysis::run(Loop &L,
+//                                                  LoopAnalysisManager &LAM) {
+//   auto P = L.getCanonicalInductionVariable();
+//   BlockPtr Incoming, BackEdge;
+//   if (!L.getIncomingAndBackEdge(Incoming, BackEdge)) {
+//     BackEdge = nullptr;
+//   }
+//   SmallVector<pair<BlockPtr, BlockPtr>> ExitEdges;
+//   L.getExitEdges(ExitEdges);
 
-  return Result(P, BackEdge, ExitEdges);
-}
-} // namespace nisse
+//   return Result(P, BackEdge, ExitEdges);
+// }
+// } // namespace nisse

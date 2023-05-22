@@ -55,14 +55,15 @@ NissePass::insertEntryFn(Function &F, multiset<Edge> &reverseSTEdges) {
   return pair(counterInst, indexInst);
 }
 
-void NissePass::insertIncrFn(Instruction *instruction, int i, Value *inst) {
+void NissePass::insertIncrFn(Edge &edge, int i, Value *inst) {
+  auto instruction = edge.getInstrumentationPoint();
   IRBuilder<> builder(instruction);
   auto *I = builder.getInt32Ty();
   Value *indexList[] = {builder.getInt32(i)};
-  Value *one = builder.getInt32(1);
+  Value *incr = edge.getInductionVariable(builder);
   auto inst1 = builder.CreateGEP(I, inst, indexList);
   auto inst2 = builder.CreateLoad(I, inst1);
-  auto inst3 = builder.CreateAdd(inst2, one);
+  auto inst3 = builder.CreateAdd(inst2, incr);
   builder.CreateStore(inst3, inst1);
 }
 
@@ -106,7 +107,8 @@ PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
   int size = reverseSTEdges.size();
 
   if (size == 1) {
-    errs() << "Function '" << F.getName() << "' has only 1 edge to instrument. Skipping...\n";
+    errs() << "Function '" << F.getName()
+           << "' has only 1 edge to instrument. Skipping...\n";
     return PreservedAnalyses::all();
   }
 
@@ -116,7 +118,7 @@ PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
 
   int i = 0;
   for (auto p : reverseSTEdges) {
-    this->insertIncrFn(p.getInstrumentationPoint(), i++, counterInst);
+    this->insertIncrFn(p, i++, counterInst);
   }
 
   this->insertExitFn(F, counterInst, indexInst, size);

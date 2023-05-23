@@ -24,7 +24,11 @@
 #include "Nisse.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
@@ -101,6 +105,8 @@ void NisseAnalysis::identifyInductionVariables(Loop *L, ScalarEvolution &SE,
           const llvm::SCEVAddRecExpr *AddRecExpr =
               cast<llvm::SCEVAddRecExpr>(SCEV);
           if (AddRecExpr->isAffine()) {
+
+            errs() << "is affine\n";
             // Affine induction variable found
             llvm::Value *IndVar = PHI;
             const llvm::SCEV *IncrementSCEV = AddRecExpr->getStepRecurrence(SE);
@@ -110,14 +116,25 @@ void NisseAnalysis::identifyInductionVariables(Loop *L, ScalarEvolution &SE,
                      ->getValue();
             BlockPtr incomingBlock, backBlock;
             L->getIncomingAndBackEdge(incomingBlock, backBlock);
-            BlockPtr exitBlock = L->getExitBlock();
-            Edge tmpEdge(backBlock, incomingBlock, -1);
+            SmallVector<BlockPtr> exitBlocks;
+            L->getExitBlocks(exitBlocks);
+            auto val = PHI->getIncomingValueForBlock(incomingBlock);
+            auto firstBlock = incomingBlock->getSingleSuccessor();
+            Edge tmpEdge(backBlock, firstBlock, -1);
+            errs() << backBlock->getName() << " " << incomingBlock->getName()
+                   << "\n";
+            for (auto block : exitBlocks) {
+              errs() << block->getName() << " ";
+            }
+            errs() << "\n";
             for (auto e : edges) {
               if (e == tmpEdge) {
                 errs() << "loop instrumenting\n";
                 e.setWeight(0);
-                e.setWellFoundedValues(
-                    IndVar, &*exitBlock->getFirstInsertionPt(), IncrementValue);
+                e.setWellFoundedValues(IndVar, val, IncrementValue, exitBlocks);
+                // e.setWellFoundedValues(
+                //     IndVar, &*exitBlock->getFirstInsertionPt(),
+                //     IncrementValue);
                 break;
               }
             }
@@ -135,15 +152,21 @@ NisseAnalysis::Result NisseAnalysis::run(llvm::Function &F,
 
   auto edges = this->generateEdges(F);
 
-  DominatorTree DT(F);
-  LoopInfo LI(DT);
-  auto loops = LI.getLoopsInPreorder();
+  // DominatorTree DT(F);
+  // LoopInfo LI(DT);
+  // auto loops = LI.getLoopsInPreorder();
 
   llvm::ScalarEvolution &SE = FAM.getResult<llvm::ScalarEvolutionAnalysis>(F);
   // auto &SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  errs() << loops.size() << "\n";
+  for (llvm::LoopInfo::iterator
+           LI = FAM.getResult<llvm::LoopAnalysis>(F).begin(),
+           LE = FAM.getResult<llvm::LoopAnalysis>(F).end();
+       LI != LE; ++LI) {
+    llvm::Loop *loop = *LI;
 
-  for (auto loop : loops) {
+    // errs() << loops->size() << "\n";
+
+    // for (auto loop : loops) {
     identifyInductionVariables(loop, SE, edges);
   }
 

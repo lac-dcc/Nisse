@@ -10,6 +10,19 @@ int test1() {
   return 3;
 }
 
+int test3(int x) {
+  int i = 100;
+  while (x<10) {
+    if (i%2==0) {
+      x++;
+      i /= 2;
+    } else {
+      i = 3*i+1;
+    }
+  }
+  return 0;
+}
+
 int test2(int x) {
   while (x > 0) {
     x--;
@@ -21,6 +34,7 @@ int main() {
   for (int i = 0; i<5; i++) {
     test2(i);
   }
+  test3(0);
   test1();
   return 0;
 }

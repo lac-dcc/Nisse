@@ -45,12 +45,17 @@ private:
   BlockPtr dest;   ///< The destination of the edge.
   int index;       ///< Index of the edge.
   int weight;      ///< An expectation of how often this edge will be executed.
-  llvm::Value
-      *indVar; ///< User defined increment value (for well-founded loops).
-  llvm::Instruction
-      *instr; ///< User defined instrumentation point (for well-founded loops).
-  const llvm::APInt *incrVal; ///< User defined increment value (for
-                              ///< well-founded loops).
+
+  bool isBackEdge; ///< User Defined flag to use if the edge is the back edge of
+                   ///< a well-founded loop.
+  llvm::Value *indVar;
+  ///< User defined induction variable (for well-founded loops).
+  llvm::Value *initValue;
+  ///< User defined initial value (for well-founded loops).
+  double incrValue;
+  ///< User defined increment value (for well-founded loops).
+  llvm::SmallVector<BlockPtr> exitBlocks;
+  ///< List of exit blocks (for well-founded loops).
 
 public:
   /// \brief Default constructor for Edge.
@@ -61,7 +66,7 @@ public:
   /// executed.
   Edge(BlockPtr origin, BlockPtr dest, int index, int weight = 1)
       : origin(origin), dest(dest), index(index), weight(weight),
-        indVar(nullptr), instr(nullptr){};
+        isBackEdge(false){};
 
   /// \brief Getter for the destination of the edge.
   /// \return The destination of the edge.
@@ -75,16 +80,9 @@ public:
   /// @param weight The weight of the edge.
   void setWeight(int weight);
 
-  void setWellFoundedValues(llvm::Value *indVar, llvm::Instruction *instr,
-                            const llvm::APInt *incrVal);
-
-  // /// @brief Setter for the induction variable of the edge.
-  // /// @param var The induction variable of the edge.
-  // void setInductionVariable(llvm::Value *var);
-
-  // /// @brief Setter for the instrumentation point of the edge.
-  // /// @param instr The instrumentation point of the edge.
-  // void setInstrumentationPoint(llvm::Instruction *instr);
+  void setWellFoundedValues(llvm::Value *indVar, llvm::Value *initValue,
+                            const llvm::APInt *incrVal,
+                            llvm::SmallVector<BlockPtr> exitBlocks);
 
   /// \brief Computes the hook to insert the Ball-Larus counter.
   /// If the source block terminates with an absolute jump, the counter is

@@ -55,17 +55,17 @@ NissePass::insertEntryFn(Function &F, multiset<Edge> &reverseSTEdges) {
   return pair(counterInst, indexInst);
 }
 
-void NissePass::insertIncrFn(Edge &edge, int i, Value *inst) {
-  auto instruction = edge.getInstrumentationPoint();
-  IRBuilder<> builder(instruction);
-  auto *I = builder.getInt32Ty();
-  Value *indexList[] = {builder.getInt32(i)};
-  Value *incr = edge.getInductionVariable(builder);
-  auto inst1 = builder.CreateGEP(I, inst, indexList);
-  auto inst2 = builder.CreateLoad(I, inst1);
-  auto inst3 = builder.CreateAdd(inst2, incr);
-  builder.CreateStore(inst3, inst1);
-}
+// void NissePass::insertIncrFn(Edge &edge, int i, Value *inst) {
+//   auto instruction = edge.getInstrumentationPoint();
+//   IRBuilder<> builder(instruction);
+//   auto *I = builder.getInt32Ty();
+//   Value *indexList[] = {builder.getInt32(i)};
+//   Value *incr = edge.getInductionVariable(builder);
+//   auto inst1 = builder.CreateGEP(I, inst, indexList);
+//   auto inst2 = builder.CreateLoad(I, inst1);
+//   auto inst3 = builder.CreateAdd(inst2, incr);
+//   builder.CreateStore(inst3, inst1);
+// }
 
 void NissePass::insertExitFn(llvm::Function &F, llvm::Value *counterInst,
                              llvm::Value *indexInst, int size) {
@@ -118,7 +118,7 @@ PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
 
   int i = 0;
   for (auto p : reverseSTEdges) {
-    this->insertIncrFn(p, i++, counterInst);
+    p.insertIncrFn(i++, counterInst);
   }
 
   this->insertExitFn(F, counterInst, indexInst, size);

@@ -1,4 +1,4 @@
-//===-- aux.cpp --------------------------------------------------===//
+//===-- Edge.cpp --------------------------------------------------===//
 // Copyright (C) 2023 Leon Frenot
 //
 // This program is free software: you can redistribute it and/or modify
@@ -16,8 +16,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the implementation of the Edge and UnionFind
-/// (Auxiliary classes for the pass)
+/// This file contains the implementation of the Edge
 ///
 //===----------------------------------------------------------------------===//
 
@@ -28,24 +27,22 @@ using namespace std;
 
 namespace nisse {
 
-// Implementation of Edge
-
 BlockPtr Edge::getOrigin() const { return this->origin; }
 
 BlockPtr Edge::getDest() const { return this->dest; }
 
 void Edge::setWeight(int weight) { this->weight = weight; }
 
-void Edge::setWellFoundedValues(llvm::Value *indVar, llvm::Instruction *instr,
-                                const llvm::APInt *incrVal) {
+void Edge::setWellFoundedValues(llvm::Value *indVar, llvm::Value *initValue,
+                                const llvm::APInt *incrValue,
+                                llvm::SmallVector<BlockPtr> exitBlocks) {
   this->indVar = indVar;
-  this->instr = instr;
-  this->incrVal = incrVal;
+  this->initValue = initValue;
+  this->incrValue = incrValue->signedRoundToDouble();
+  this->exitBlocks = exitBlocks;
 }
 
 Instruction *Edge::getInstrumentationPoint() const {
-  if (this->instr != nullptr)
-    return this->instr;
   Instruction *instr;
   if (this->origin->getUniqueSuccessor() == this->dest) {
     instr = this->origin->getTerminator();
@@ -78,11 +75,27 @@ void Edge::insertSimpleIncrFn(int i, Value *inst) {
   builder.CreateStore(inst3, inst1);
 }
 
+void Edge::insertLoopIncrFn(int i, Value *inst) {
+  for (auto block : this->exitBlocks) {
+    auto instruction = &*block->getFirstInsertionPt();
+    IRBuilder<> builder(instruction);
+    auto *I = builder.getInt32Ty();
+    Value *indexList[] = {builder.getInt32(i)};
+    auto incrValueCst = builder.getInt32(this->incrValue);
+    auto inst1 = builder.CreateGEP(I, inst, indexList);
+    auto inst2 = builder.CreateLoad(I, inst1);
+    auto inst3 = builder.CreateSub(this->indVar, this->initValue);
+    auto incr = builder.CreateSDiv(inst3, incrValueCst);
+    auto inst4 = builder.CreateAdd(inst2, incr);
+    builder.CreateStore(inst3, inst1);
+  }
+}
+
 void Edge::insertIncrFn(int i, Value *inst) {
-  if (this->indVar != nullptr)
+  if (this->isBackEdge)
     this->insertLoopIncrFn(i, inst);
   else
-    this->insertLoopIncrFn(i, inst);
+    this->insertSimpleIncrFn(i, inst);
 }
 
 int Edge::getIndex() const { return this->index; }
@@ -90,7 +103,8 @@ int Edge::getIndex() const { return this->index; }
 string Edge::getName() const { return to_string(this->index); }
 
 bool Edge::operator==(const Edge &e) const {
-  return this->origin == e.origin && this->dest == e.dest;
+  return this->origin->getName() == e.origin->getName() &&
+         this->dest->getName() == e.dest->getName();
 }
 
 bool Edge::operator<(const Edge &e) const { return this->weight < e.weight; }
@@ -107,45 +121,6 @@ std::ostream &operator<<(std::ostream &os, const Edge &e) {
   os << NisseAnalysis::removebb(e.getOrigin()->getName().str()) << string(" ")
      << NisseAnalysis::removebb(e.getDest()->getName().str());
   return os;
-}
-
-// Implementation of UnionFind
-
-void UnionFind::init(void *x) {
-  this->id[x] = x;
-  this->sz[x] = 1;
-  this->cnt++;
-}
-
-void *UnionFind::find(void *x) {
-  void *root = x;
-  while (root != this->id[root])
-    root = this->id[root];
-
-  while (x != root) {
-    void *newp = this->id[x];
-    this->id[x] = root;
-    x = newp;
-  }
-  return root;
-}
-
-void UnionFind::merge(void *x, void *y) {
-  void *i = this->find(x);
-  void *j = this->find(y);
-  if (i == j)
-    return;
-
-  if (this->sz[i] < this->sz[j]) {
-    this->id[i] = j, this->sz[j] += this->sz[i];
-  } else {
-    this->id[j] = i, this->sz[i] += this->sz[j];
-  }
-  this->cnt--;
-}
-
-bool UnionFind::connected(void *x, void *y) {
-  return this->find(x) == this->find(y);
 }
 
 } // namespace nisse

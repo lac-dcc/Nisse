@@ -78,12 +78,13 @@ void initGraph(string input, vi &vertex, vpi &edges, si &ST, si &revST, msi &in,
   }
 
   graph >> count;
+  edges = vpi(count);
   for (int i = 0; i < count; i++) {
-    int a, b;
-    graph >> a >> b;
-    edges.push_back(pair(a, b));
-    out.at(a).insert(i);
-    in.at(b).insert(i);
+    int j, a, b;
+    graph >> j >> a >> b;
+    edges.at(j) = pair(a, b);
+    out.at(a).insert(j);
+    in.at(b).insert(j);
   }
 
   if (debug) {
@@ -324,7 +325,7 @@ int main(int argc, char **argv) {
       outputFile(OutputFilename, edges, w);
     } else {
       if (to_print) {
-        cout << "Printing the weigths of '" << input << "'...\n";
+        cout << "Printing the weights of '" << input << "'...\n";
         to_print = false;
       }
       outputCout(edges, w);

@@ -46,8 +46,6 @@ cd $PROF_DIR
 $LLVM_CLANG -Xclang -disable-O0-optnone -c -S -emit-llvm ../$FL_NAME -o $LL_NAME
 if [[ $ret_code -ne 0 ]]; then
   echo "Compilation failed"
-  cd ..
-  rm -r $PROF_DIR
   cd -
   exit $ret_code
 fi
@@ -70,8 +68,6 @@ $LLVM_CLANG -Wall $CLANG_FLAGS $PF_NAME $PROFILER_IMPL -o $BS_NAME
 ret_code=$?
 if [[ $ret_code -ne 0 ]]; then
   echo "Compilation failed"
-  cd ..
-  rm -r $PROF_DIR
   cd -
   exit $ret_code
 fi

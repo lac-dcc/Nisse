@@ -52,28 +52,32 @@ BlockPtr NisseAnalysis::findReturnBlock(llvm::Function &F) {
 
 string NisseAnalysis::removebb(const std::string &s) {
   string sub = regex_replace(s, regex(R"([\D])"), "");
-  if (sub.size() > 0)
+  if (sub.size() > 0) {
+    if (regex_match(s, regex(".*crit.*"))) {
+      return "-" + sub;
+    }
     return sub;
+  }
   return "0";
 }
 
 // Initialize the analysis key.
 AnalysisKey NisseAnalysis::Key;
 
-SmallVector<Edge> NisseAnalysis::generateEdges(Function &F) {
-  SmallVector<Edge> edges;
+multiset<Edge> NisseAnalysis::generateEdges(Function &F) {
+  multiset<Edge> edges;
   int index = 0;
   for (auto &BB : F) {
     for (auto Succ : successors(&BB)) {
-      edges.push_back(Edge(&BB, Succ, index++));
+      edges.insert(Edge(&BB, Succ, index++));
     }
   }
-  edges.push_back(Edge(findReturnBlock(F), &F.getEntryBlock(), index++, 0));
+  edges.insert(Edge(findReturnBlock(F), &F.getEntryBlock(), index++, 0));
   return edges;
 }
 
 pair<multiset<Edge>, multiset<Edge>>
-NisseAnalysis::generateSTrev(Function &F, SmallVector<Edge> &edges) {
+NisseAnalysis::generateSTrev(Function &F, multiset<Edge> &edges) {
   multiset<Edge> ST;
   multiset<Edge> rev;
   UnionFind uf;
@@ -81,8 +85,11 @@ NisseAnalysis::generateSTrev(Function &F, SmallVector<Edge> &edges) {
     uf.init(&BB);
   }
 
-  llvm::sort(edges.begin(), edges.end(), Edge::compareWeights);
-  for (auto e : edges) {
+  for (auto e:edges) {
+    errs() << e << " " << e.getWeight() << "\n";
+  }
+  multiset<Edge, greater<Edge>> revEdges(edges.begin(), edges.end());
+  for (auto e: revEdges) {
     auto BB1 = e.getOrigin();
     auto BB2 = e.getDest();
     if (!uf.connected(BB1, BB2)) {
@@ -96,50 +103,36 @@ NisseAnalysis::generateSTrev(Function &F, SmallVector<Edge> &edges) {
 }
 
 void NisseAnalysis::identifyInductionVariables(Loop *L, ScalarEvolution &SE,
-                                               SmallVector<Edge> edges) const {
-  for (auto *BB : L->getBlocks()) {
-    for (auto &Inst : *BB) {
-      if (auto *PHI = dyn_cast<llvm::PHINode>(&Inst)) {
-        const llvm::SCEV *SCEV = SE.getSCEV(PHI);
-        if (SE.containsAddRecurrence(SCEV)) {
-          const llvm::SCEVAddRecExpr *AddRecExpr =
-              cast<llvm::SCEVAddRecExpr>(SCEV);
-          if (AddRecExpr->isAffine()) {
+                                               multiset<Edge> &edges) {
+  BlockPtr incomingBlock, backBlock;
+  L->getIncomingAndBackEdge(incomingBlock, backBlock);
+  SmallVector<BlockPtr> exitBlocks;
+  L->getExitBlocks(exitBlocks);
+  auto firstBlock = incomingBlock->getSingleSuccessor();
+  Edge backEdge(backBlock, firstBlock, -1);
 
-            errs() << "is affine\n";
-            // Affine induction variable found
-            llvm::Value *IndVar = PHI;
-            const llvm::SCEV *IncrementSCEV = AddRecExpr->getStepRecurrence(SE);
-            const llvm::APInt *IncrementValue =
-                &cast<llvm::SCEVConstant>(IncrementSCEV)
-                     ->getValue()
-                     ->getValue();
-            BlockPtr incomingBlock, backBlock;
-            L->getIncomingAndBackEdge(incomingBlock, backBlock);
-            SmallVector<BlockPtr> exitBlocks;
-            L->getExitBlocks(exitBlocks);
-            auto val = PHI->getIncomingValueForBlock(incomingBlock);
-            auto firstBlock = incomingBlock->getSingleSuccessor();
-            Edge tmpEdge(backBlock, firstBlock, -1);
-            errs() << backBlock->getName() << " " << incomingBlock->getName()
-                   << "\n";
-            for (auto block : exitBlocks) {
-              errs() << block->getName() << " ";
+  for (auto &Inst : *firstBlock) {
+    if (auto *PHI = dyn_cast<llvm::PHINode>(&Inst)) {
+      const llvm::SCEV *SCEV = SE.getSCEV(PHI);
+      if (SE.containsAddRecurrence(SCEV)) {
+        const llvm::SCEVAddRecExpr *AddRecExpr =
+            cast<llvm::SCEVAddRecExpr>(SCEV);
+        if (AddRecExpr->isAffine()) {
+          // Affine induction variable found
+          llvm::Value *IndVar = PHI;
+          const llvm::SCEV *IncrementSCEV = AddRecExpr->getStepRecurrence(SE);
+          const llvm::APInt *IncrementValue =
+              &cast<llvm::SCEVConstant>(IncrementSCEV)->getValue()->getValue();
+          auto val = PHI->getIncomingValueForBlock(incomingBlock);
+          for (auto &e : edges) {
+            if (e == backEdge) {
+              edges.erase(e);
+              Edge new_e = e;
+              new_e.setWeight(0);
+              new_e.setWellFoundedValues(IndVar, val, IncrementValue, exitBlocks);
+              edges.insert(new_e);
+              return;
             }
-            errs() << "\n";
-            for (auto e : edges) {
-              if (e == tmpEdge) {
-                errs() << "loop instrumenting\n";
-                e.setWeight(0);
-                e.setWellFoundedValues(IndVar, val, IncrementValue, exitBlocks);
-                // e.setWellFoundedValues(
-                //     IndVar, &*exitBlock->getFirstInsertionPt(),
-                //     IncrementValue);
-                break;
-              }
-            }
-            llvm::errs() << "Induction Variable: " << *IndVar << "\n";
-            llvm::errs() << "Increment Value: " << IncrementValue << "\n";
           }
         }
       }
@@ -147,30 +140,9 @@ void NisseAnalysis::identifyInductionVariables(Loop *L, ScalarEvolution &SE,
   }
 }
 
-NisseAnalysis::Result NisseAnalysis::run(llvm::Function &F,
-                                         llvm::FunctionAnalysisManager &FAM) {
-
-  auto edges = this->generateEdges(F);
-
-  // DominatorTree DT(F);
-  // LoopInfo LI(DT);
-  // auto loops = LI.getLoopsInPreorder();
-
-  llvm::ScalarEvolution &SE = FAM.getResult<llvm::ScalarEvolutionAnalysis>(F);
-  // auto &SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  for (llvm::LoopInfo::iterator
-           LI = FAM.getResult<llvm::LoopAnalysis>(F).begin(),
-           LE = FAM.getResult<llvm::LoopAnalysis>(F).end();
-       LI != LE; ++LI) {
-    llvm::Loop *loop = *LI;
-
-    // errs() << loops->size() << "\n";
-
-    // for (auto loop : loops) {
-    identifyInductionVariables(loop, SE, edges);
-  }
-
-  auto STrev = this->generateSTrev(F, edges);
+void NisseAnalysis::printGraph(
+    llvm::Function &F, multiset<Edge> &edges,
+    std::pair<std::multiset<Edge>, std::multiset<Edge>> &STrev) {
 
   string fileName = F.getName().str() + ".graph";
 
@@ -204,6 +176,25 @@ NisseAnalysis::Result NisseAnalysis::run(llvm::Function &F,
   }
 
   file.close();
+}
+
+NisseAnalysis::Result NisseAnalysis::run(llvm::Function &F,
+                                         llvm::FunctionAnalysisManager &FAM) {
+
+  auto edges = this->generateEdges(F);
+
+  llvm::ScalarEvolution &SE = FAM.getResult<llvm::ScalarEvolutionAnalysis>(F);
+  for (llvm::LoopInfo::iterator
+           LI = FAM.getResult<llvm::LoopAnalysis>(F).begin(),
+           LE = FAM.getResult<llvm::LoopAnalysis>(F).end();
+       LI != LE; ++LI) {
+    llvm::Loop *loop = *LI;
+    identifyInductionVariables(loop, SE, edges);
+  }
+
+  auto STrev = this->generateSTrev(F, edges);
+
+  printGraph(F, edges, STrev);
 
   return make_tuple(edges, STrev.first, STrev.second);
 }

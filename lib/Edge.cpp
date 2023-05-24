@@ -31,15 +31,20 @@ BlockPtr Edge::getOrigin() const { return this->origin; }
 
 BlockPtr Edge::getDest() const { return this->dest; }
 
+int Edge::getWeight() { return this->weight; }
+
 void Edge::setWeight(int weight) { this->weight = weight; }
+
+void Edge::setIndex(int index) { this->index = index; }
 
 void Edge::setWellFoundedValues(llvm::Value *indVar, llvm::Value *initValue,
                                 const llvm::APInt *incrValue,
-                                llvm::SmallVector<BlockPtr> exitBlocks) {
+                                llvm::SmallVector<BlockPtr> &exitBlocks) {
   this->indVar = indVar;
   this->initValue = initValue;
   this->incrValue = incrValue->signedRoundToDouble();
   this->exitBlocks = exitBlocks;
+  this->isBackEdge = true;
 }
 
 Instruction *Edge::getInstrumentationPoint() const {
@@ -83,22 +88,29 @@ void Edge::insertLoopIncrFn(int i, Value *inst) {
     Value *indexList[] = {builder.getInt32(i)};
     auto incrValueCst = builder.getInt32(this->incrValue);
     auto inst1 = builder.CreateGEP(I, inst, indexList);
-    auto inst2 = builder.CreateLoad(I, inst1);
+    auto inst = builder.CreateLoad(I, inst1);
     auto inst3 = builder.CreateSub(this->indVar, this->initValue);
-    auto incr = builder.CreateSDiv(inst3, incrValueCst);
-    auto inst4 = builder.CreateAdd(inst2, incr);
-    builder.CreateStore(inst3, inst1);
+    if (inst3->getType() != builder.getInt32Ty()) {
+      inst3 = builder.CreateIntCast(inst3, builder.getInt32Ty(), true);
+    }
+    auto incr0 = builder.CreateSDiv(inst3, incrValueCst);
+    auto incr = builder.CreateIntCast(incr0, builder.getInt32Ty(), true);
+    auto inst4 = builder.CreateAdd(inst, incr);
+    builder.CreateStore(inst4, inst1);
   }
 }
 
 void Edge::insertIncrFn(int i, Value *inst) {
-  if (this->isBackEdge)
+  if (this->isBackEdge) {
     this->insertLoopIncrFn(i, inst);
-  else
+  } else {
     this->insertSimpleIncrFn(i, inst);
+  }
 }
 
 int Edge::getIndex() const { return this->index; }
+
+bool Edge::getIsBackEdge() const { return this->isBackEdge; }
 
 string Edge::getName() const { return to_string(this->index); }
 
@@ -107,7 +119,17 @@ bool Edge::operator==(const Edge &e) const {
          this->dest->getName() == e.dest->getName();
 }
 
-bool Edge::operator<(const Edge &e) const { return this->weight < e.weight; }
+bool Edge::operator<(const Edge &e) const {
+  if (this->weight != e.weight)
+    return this->weight < e.weight;
+  return this->index < e.index;
+}
+
+bool Edge::operator>(const Edge &e) const {
+  if (this->weight != e.weight)
+    return this->weight > e.weight;
+  return this->index > e.index;
+}
 
 bool Edge::compareWeights(const Edge &a, const Edge &b) { return b < a; }
 
@@ -118,7 +140,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Edge &e) {
 }
 
 std::ostream &operator<<(std::ostream &os, const Edge &e) {
-  os << NisseAnalysis::removebb(e.getOrigin()->getName().str()) << string(" ")
+  os << to_string(e.getIndex()) << string(" ")
+     << NisseAnalysis::removebb(e.getOrigin()->getName().str()) << string(" ")
      << NisseAnalysis::removebb(e.getDest()->getName().str());
   return os;
 }

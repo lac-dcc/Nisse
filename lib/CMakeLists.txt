@@ -7,12 +7,6 @@ add_library(Nisse MODULE
     NissePlugin.cpp
     Edge.cpp
     UnionFind.cpp)
-    #NisseLoopAnalysis.cpp)
-
-# add_library(SCEVEx SHARED SCEVEx.cpp)
 
 target_include_directories(Nisse PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/../include")
-
-# target_include_directories(SCEVEx PRIVATE
-#     "${CMAKE_CURRENT_SOURCE_DIR}/../include")

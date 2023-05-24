@@ -76,13 +76,17 @@ public:
   /// \return The destination of the edge.
   BlockPtr getDest() const;
 
+  int getWeight();
+
   /// @brief Setter for the weight of the edge.
   /// @param weight The weight of the edge.
   void setWeight(int weight);
 
+  void setIndex(int index);
+
   void setWellFoundedValues(llvm::Value *indVar, llvm::Value *initValue,
                             const llvm::APInt *incrVal,
-                            llvm::SmallVector<BlockPtr> exitBlocks);
+                            llvm::SmallVector<BlockPtr> &exitBlocks);
 
   /// \brief Computes the hook to insert the Ball-Larus counter.
   /// If the source block terminates with an absolute jump, the counter is
@@ -109,6 +113,8 @@ public:
   /// \return the edge's index.
   int getIndex() const;
 
+  bool getIsBackEdge() const;
+
   /// \brief Getter for the name of the edge.
   /// If there is no user-defined name, will return the edge's index.
   /// \return Returns the name of the edge.
@@ -124,6 +130,8 @@ public:
   /// \param e Edge to compare the current edge to.
   /// \return true if the current edge has lower weight than e.
   bool operator<(const Edge &e) const;
+
+  bool operator>(const Edge &e) const;
 
   /// \brief Compares the weight of two edges.
   /// \param a First edge to compare.
@@ -186,14 +194,14 @@ public:
 struct NisseAnalysis : public llvm::AnalysisInfoMixin<NisseAnalysis> {
 
   /// \brief The return type of the analysis pass.
-  using Result = std::tuple<llvm::SmallVector<Edge>, std::multiset<Edge>,
+  using Result = std::tuple<std::multiset<Edge>, std::multiset<Edge>,
                             std::multiset<Edge>>;
 
 private:
   /// \brief Generates the set of edges of a function's CFG.
   /// \param F The function to compute the edges of.
   /// \return a vector containing the edges of F.
-  llvm::SmallVector<Edge> generateEdges(llvm::Function &F);
+  std::multiset<Edge> generateEdges(llvm::Function &F);
 
   /// \brief Generates the maximum spanning tree of a set of F's edges.
   /// \param F The function the edges belong to.
@@ -201,10 +209,13 @@ private:
   /// \return A pair of the set of edges in the spanning tree and the set of
   /// edges in its complementary.
   std::pair<std::multiset<Edge>, std::multiset<Edge>>
-  generateSTrev(llvm::Function &F, llvm::SmallVector<Edge> &edges);
+  generateSTrev(llvm::Function &F, std::multiset<Edge> &edges);
 
   void identifyInductionVariables(llvm::Loop *L, llvm::ScalarEvolution &SE,
-                                  llvm::SmallVector<Edge>) const;
+                                  std::multiset<Edge> &edges);
+
+  void printGraph(llvm::Function &F, std::multiset<Edge> &edges,
+                  std::pair<std::multiset<Edge>, std::multiset<Edge>> &STrev);
 
 public:
   /// \brief A special type used by analysis passes to provide an address that
@@ -243,11 +254,11 @@ protected:
   std::pair<llvm::Value *, llvm::Value *>
   insertEntryFn(llvm::Function &F, std::multiset<Edge> &reverseSTEdges);
 
-  /// \brief Inserts an increment to the counter array.
-  /// \param instruction The instruction above which to insert the increment.
-  /// \param i The index of the array to increment.
-  /// \param counterInst The instruction pointer to the counter array.
-  void insertIncrFn(Edge &edge, int i, llvm::Value *counterInst);
+  // /// \brief Inserts an increment to the counter array.
+  // /// \param instruction The instruction above which to insert the increment.
+  // /// \param i The index of the array to increment.
+  // /// \param counterInst The instruction pointer to the counter array.
+  // void insertIncrFn(Edge &edge, int i, llvm::Value *counterInst);
 
   /// \brief Inserts a call to the function that prints the results of the
   /// counter.

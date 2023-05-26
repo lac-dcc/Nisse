@@ -21,7 +21,7 @@ PROP_BIN=$BUILD_DIR/bin/propagation
 
 # Move to folder where the file is:
 #
-DR_NAME="$PWD/$(dirname $1)"
+DR_NAME="$(dirname $1)"
 cd $DR_NAME
 
 # File names:
@@ -47,6 +47,7 @@ $LLVM_CLANG -Xclang -disable-O0-optnone -c -S -emit-llvm ../$FL_NAME -o $LL_NAME
 if [[ $ret_code -ne 0 ]]; then
   echo "Compilation failed"
   cd -
+  echo $FL_NAME >> err.txt
   exit $ret_code
 fi
 $LLVM_OPT -S -passes="mem2reg,instnamer" $LL_NAME -o $LL_NAME
@@ -69,6 +70,7 @@ ret_code=$?
 if [[ $ret_code -ne 0 ]]; then
   echo "Compilation failed"
   cd -
+  echo $FL_NAME >> err.txt
   exit $ret_code
 fi
 

@@ -84,12 +84,8 @@ NisseAnalysis::generateSTrev(Function &F, multiset<Edge> &edges) {
   for (auto &BB : F) {
     uf.init(&BB);
   }
-
-  for (auto e:edges) {
-    errs() << e << " " << e.getWeight() << "\n";
-  }
   multiset<Edge, greater<Edge>> revEdges(edges.begin(), edges.end());
-  for (auto e: revEdges) {
+  for (auto e : revEdges) {
     auto BB1 = e.getOrigin();
     auto BB2 = e.getDest();
     if (!uf.connected(BB1, BB2)) {
@@ -121,15 +117,19 @@ void NisseAnalysis::identifyInductionVariables(Loop *L, ScalarEvolution &SE,
           // Affine induction variable found
           llvm::Value *IndVar = PHI;
           const llvm::SCEV *IncrementSCEV = AddRecExpr->getStepRecurrence(SE);
+          const llvm::SCEVConstant *IncrementSCEVCst =
+              dyn_cast<llvm::SCEVConstant>(IncrementSCEV);
+          if (!IncrementSCEVCst)
+            break;
           const llvm::APInt *IncrementValue =
-              &cast<llvm::SCEVConstant>(IncrementSCEV)->getValue()->getValue();
+              &IncrementSCEVCst->getValue()->getValue();
           auto val = PHI->getIncomingValueForBlock(incomingBlock);
           for (auto &e : edges) {
             if (e == backEdge) {
               edges.erase(e);
               Edge new_e = e;
-              new_e.setWeight(0);
-              new_e.setWellFoundedValues(IndVar, val, IncrementValue, exitBlocks);
+              new_e.setWellFoundedValues(IndVar, val, IncrementValue,
+                                         exitBlocks);
               edges.insert(new_e);
               return;
             }
@@ -184,11 +184,11 @@ NisseAnalysis::Result NisseAnalysis::run(llvm::Function &F,
   auto edges = this->generateEdges(F);
 
   llvm::ScalarEvolution &SE = FAM.getResult<llvm::ScalarEvolutionAnalysis>(F);
-  for (llvm::LoopInfo::iterator
-           LI = FAM.getResult<llvm::LoopAnalysis>(F).begin(),
-           LE = FAM.getResult<llvm::LoopAnalysis>(F).end();
-       LI != LE; ++LI) {
-    llvm::Loop *loop = *LI;
+
+  DominatorTree DT(F);
+  LoopInfo LI(DT);
+  auto loops = LI.getLoopsInPreorder();
+  for (auto loop : loops) {
     identifyInductionVariables(loop, SE, edges);
   }
 

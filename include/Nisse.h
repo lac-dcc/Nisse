@@ -57,6 +57,30 @@ private:
   llvm::SmallVector<BlockPtr> exitBlocks;
   ///< List of exit blocks (for well-founded loops).
 
+  /// @brief Instruments the edge with an increment counter.
+  /// @param i The index of the array to increment.
+  /// @param inst The instruction to the counter-array.
+  void insertSimpleIncrFn(int i, llvm::Value *inst);
+
+  /// @brief Instruments the edge with a well-founded loop counter.
+  /// @param i The index of the array to increment.
+  /// @param inst The instruction to the counter-array.
+  void insertLoopIncrFn(int i, llvm::Value *inst);
+
+  /// @brief Casts a value to i32.
+  /// @param inst The value to cast.
+  /// @param builder The builder where to insert the cast.
+  /// @return The casted value.
+  llvm::Value *createInt32Cast(llvm::Value *inst, llvm::IRBuilder<> &builder);
+
+  /// \brief Computes the hook to insert the Ball-Larus counter.
+  /// If the source block terminates with an absolute jump, the counter is
+  /// placed at the end of that block. If not, it is placed at the start of the
+  /// destination block. If the hooked block is the entry block, the counter
+  /// will always be placed at the end of the block.
+  /// \return The pointer to the hook for the counter.
+  llvm::Instruction *getInstrumentationPoint() const;
+
 public:
   /// \brief Default constructor for Edge.
   /// \param origin The origin of the edge.
@@ -76,44 +100,25 @@ public:
   /// \return The destination of the edge.
   BlockPtr getDest() const;
 
-  int getWeight();
-
-  /// @brief Setter for the weight of the edge.
-  /// @param weight The weight of the edge.
-  void setWeight(int weight);
-
-  void setIndex(int index);
-
+  /// @brief Sets the variables for a well founded loop's back edge.
+  /// @param indVar The induction variable.
+  /// @param initValue The induction variable's original value.
+  /// @param incrVal The induction variable's increment.
+  /// @param exitBlocks The loop's exit blocks.
+  /// @param weight The edge's new weight.
   void setWellFoundedValues(llvm::Value *indVar, llvm::Value *initValue,
                             const llvm::APInt *incrVal,
-                            llvm::SmallVector<BlockPtr> &exitBlocks);
+                            llvm::SmallVector<BlockPtr> &exitBlocks,
+                            int weight = 0);
 
-  /// \brief Computes the hook to insert the Ball-Larus counter.
-  /// If the source block terminates with an absolute jump, the counter is
-  /// placed at the end of that block. If not, it is placed at the start of the
-  /// destination block. If the hooked block is the entry block, the counter
-  /// will always be placed at the end of the block.
-  /// \return The pointer to the hook for the counter.
-  llvm::Instruction *getInstrumentationPoint() const;
-
-  /// @brief Computes the value to increment the edge's counter by.
-  /// If it is a well-founded loop's return edge, returns the loop's
-  /// incrementation variable. (The loop's outgoing edge is instrumented.)
-  /// @param builder The builder used to insert the instructions.
-  /// @return The value to increment the edge's counter by.
-  llvm::Value *getInductionVariable(llvm::IRBuilder<> &builder) const;
-
-  void insertSimpleIncrFn(int i, llvm::Value *inst);
-
-  void insertLoopIncrFn(int i, llvm::Value *inst);
-
+  /// @brief Instruments the edge.
+  /// @param i The index of the array to increment.
+  /// @param inst The instruction to the counter-array.
   void insertIncrFn(int i, llvm::Value *inst);
 
   /// \brief Getter for the edge's index.
   /// \return the edge's index.
   int getIndex() const;
-
-  bool getIsBackEdge() const;
 
   /// \brief Getter for the name of the edge.
   /// If there is no user-defined name, will return the edge's index.
@@ -131,6 +136,9 @@ public:
   /// \return true if the current edge has lower weight than e.
   bool operator<(const Edge &e) const;
 
+  /// @brief Compares the weight of two edges.
+  /// @param e Edge to compare the current edge to.
+  /// \return true if the current edge has higher weight than e.
   bool operator>(const Edge &e) const;
 
   /// \brief Compares the weight of two edges.
@@ -194,8 +202,8 @@ public:
 struct NisseAnalysis : public llvm::AnalysisInfoMixin<NisseAnalysis> {
 
   /// \brief The return type of the analysis pass.
-  using Result = std::tuple<std::multiset<Edge>, std::multiset<Edge>,
-                            std::multiset<Edge>>;
+  using Result =
+      std::tuple<std::multiset<Edge>, std::multiset<Edge>, std::multiset<Edge>>;
 
 private:
   /// \brief Generates the set of edges of a function's CFG.
@@ -253,12 +261,6 @@ protected:
   /// \return The instruction pointer to the assignment of the array.
   std::pair<llvm::Value *, llvm::Value *>
   insertEntryFn(llvm::Function &F, std::multiset<Edge> &reverseSTEdges);
-
-  // /// \brief Inserts an increment to the counter array.
-  // /// \param instruction The instruction above which to insert the increment.
-  // /// \param i The index of the array to increment.
-  // /// \param counterInst The instruction pointer to the counter array.
-  // void insertIncrFn(Edge &edge, int i, llvm::Value *counterInst);
 
   /// \brief Inserts a call to the function that prints the results of the
   /// counter.

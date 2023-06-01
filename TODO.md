@@ -15,4 +15,6 @@
 - [x] Call break crit edge in pass
 - [x] Remove NissePassPrint
 
-- [ ] loop analysis
+- [x] loop analysis
+- [ ] analyse time
+- [ ] extend analysis

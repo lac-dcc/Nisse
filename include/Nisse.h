@@ -57,20 +57,20 @@ private:
   llvm::SmallVector<BlockPtr> exitBlocks;
   ///< List of exit blocks (for well-founded loops).
 
-  /// @brief Instruments the edge with an increment counter.
-  /// @param i The index of the array to increment.
-  /// @param inst The instruction to the counter-array.
+  /// \brief Instruments the edge with an increment counter.
+  /// \param i The index of the array to increment.
+  /// \param inst The instruction to the counter-array.
   void insertSimpleIncrFn(int i, llvm::Value *inst);
 
-  /// @brief Instruments the edge with a well-founded loop counter.
-  /// @param i The index of the array to increment.
-  /// @param inst The instruction to the counter-array.
+  /// \brief Instruments the edge with a well-founded loop counter.
+  /// \param i The index of the array to increment.
+  /// \param inst The instruction to the counter-array.
   void insertLoopIncrFn(int i, llvm::Value *inst);
 
-  /// @brief Casts a value to i32.
-  /// @param inst The value to cast.
-  /// @param builder The builder where to insert the cast.
-  /// @return The casted value.
+  /// \brief Casts a value to i32.
+  /// \param inst The value to cast.
+  /// \param builder The builder where to insert the cast.
+  /// \return The casted value.
   llvm::Value *createInt32Cast(llvm::Value *inst, llvm::IRBuilder<> &builder);
 
   /// \brief Computes the hook to insert the Ball-Larus counter.
@@ -100,20 +100,20 @@ public:
   /// \return The destination of the edge.
   BlockPtr getDest() const;
 
-  /// @brief Sets the variables for a well founded loop's back edge.
-  /// @param indVar The induction variable.
-  /// @param initValue The induction variable's original value.
-  /// @param incrVal The induction variable's increment.
-  /// @param exitBlocks The loop's exit blocks.
-  /// @param weight The edge's new weight.
+  /// \brief Sets the variables for a well founded loop's back edge.
+  /// \param indVar The induction variable.
+  /// \param initValue The induction variable's original value.
+  /// \param incrVal The induction variable's increment.
+  /// \param exitBlocks The loop's exit blocks.
+  /// \param weight The edge's new weight.
   void setWellFoundedValues(llvm::Value *indVar, llvm::Value *initValue,
                             const llvm::APInt *incrVal,
                             llvm::SmallVector<BlockPtr> &exitBlocks,
                             int weight = 0);
 
-  /// @brief Instruments the edge.
-  /// @param i The index of the array to increment.
-  /// @param inst The instruction to the counter-array.
+  /// \brief Instruments the edge.
+  /// \param i The index of the array to increment.
+  /// \param inst The instruction to the counter-array.
   void insertIncrFn(int i, llvm::Value *inst);
 
   /// \brief Getter for the edge's index.
@@ -136,8 +136,8 @@ public:
   /// \return true if the current edge has lower weight than e.
   bool operator<(const Edge &e) const;
 
-  /// @brief Compares the weight of two edges.
-  /// @param e Edge to compare the current edge to.
+  /// \brief Compares the weight of two edges.
+  /// \param e Edge to compare the current edge to.
   /// \return true if the current edge has higher weight than e.
   bool operator>(const Edge &e) const;
 
@@ -206,6 +206,10 @@ struct NisseAnalysis : public llvm::AnalysisInfoMixin<NisseAnalysis> {
       std::tuple<std::multiset<Edge>, std::multiset<Edge>, std::multiset<Edge>>;
 
 private:
+  void identifyInductionVariables(llvm::Loop *L, llvm::ScalarEvolution &SE,
+                                  std::multiset<Edge> &edges);
+
+protected:
   /// \brief Generates the set of edges of a function's CFG.
   /// \param F The function to compute the edges of.
   /// \return a vector containing the edges of F.
@@ -219,9 +223,12 @@ private:
   std::pair<std::multiset<Edge>, std::multiset<Edge>>
   generateSTrev(llvm::Function &F, std::multiset<Edge> &edges);
 
-  void identifyInductionVariables(llvm::Loop *L, llvm::ScalarEvolution &SE,
-                                  std::multiset<Edge> &edges);
-
+  /// \brief Saves the CFG, the Spanning Tree and the instrumented edges to a
+  /// file.
+  /// \param F The function the edges belong to.
+  /// \param edges The set of edges to generate the maximum spanning tree of.
+  /// \param STrev the set of edges in the spanning tree and the set of
+  /// edges in its complementary.
   void printGraph(llvm::Function &F, std::multiset<Edge> &edges,
                   std::pair<std::multiset<Edge>, std::multiset<Edge>> &STrev);
 
@@ -251,7 +258,7 @@ public:
 
 /// \struct NissePass
 ///
-/// \brief Instruments a function for Ball-Larus edge instrumentation.
+/// \brief Instruments a function for edge instrumentation.
 struct NissePass : public llvm::PassInfoMixin<NissePass> {
 protected:
   /// \brief Inserts the initialization code, which creates a
@@ -272,6 +279,27 @@ protected:
                     llvm::Value *indexInst, int size);
 
 public:
+  /// \brief The transformation pass' run function. Instruments the function
+  /// given as argument for Ball-Larus edge instrumentation.
+  /// \param F The function to transform.
+  /// \param FAM The current FunctionAnalysisManager.
+  /// \return ¯\_ (ツ)_/¯
+  llvm::PreservedAnalyses run(llvm::Function &F,
+                              llvm::FunctionAnalysisManager &FAM);
+};
+
+/// \brief Computes the maximum spanning tree of a function's CFG
+struct BallAnalysis : public NisseAnalysis {
+  /// \brief The analysis pass' run function.
+  /// \param F The function to analyse.
+  /// \param FAM The current FunctionAnalysisManager.
+  /// \return A triple with the set of edges in F, a maximum spanning tree, and
+  /// its complementary.
+  Result run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
+};
+
+/// \brief Instruments a function for Ball-Larus edge instrumentation.
+struct BallPass : public NissePass {
   /// \brief The transformation pass' run function. Instruments the function
   /// given as argument for Ball-Larus edge instrumentation.
   /// \param F The function to transform.

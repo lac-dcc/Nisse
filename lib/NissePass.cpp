@@ -113,4 +113,31 @@ PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
 
   return PreservedAnalyses::all();
 }
+
+PreservedAnalyses BallPass::run(Function &F, FunctionAnalysisManager &FAM) {
+
+  auto &edges = FAM.getResult<BallAnalysis>(F);
+  auto &reverseSTEdges = get<2>(edges);
+  int size = reverseSTEdges.size();
+
+  if (size == 1) {
+    errs() << "Function '" << F.getName()
+           << "' has only 1 edge to instrument. Skipping...\n";
+    return PreservedAnalyses::all();
+  }
+
+  auto pInst = this->insertEntryFn(F, reverseSTEdges);
+  auto counterInst = pInst.first;
+  auto indexInst = pInst.second;
+
+  int i = 0;
+  for (auto p : reverseSTEdges) {
+    p.insertIncrFn(i++, counterInst);
+  }
+
+  this->insertExitFn(F, counterInst, indexInst, size);
+
+  return PreservedAnalyses::all();
+}
+
 } // namespace nisse

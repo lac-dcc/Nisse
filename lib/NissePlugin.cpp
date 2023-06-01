@@ -49,6 +49,12 @@ bool registerPipeline(StringRef Name, FunctionPassManager &FPM,
     return true;
   }
 
+  if (Name == "ball") {
+    FPM.addPass(BreakCriticalEdgesPass());
+    FPM.addPass(nisse::BallPass());
+    return true;
+  }
+
   return false;
 }
 /// \brief Registers the plugins for the pipelines

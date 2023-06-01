@@ -198,4 +198,17 @@ NisseAnalysis::Result NisseAnalysis::run(llvm::Function &F,
 
   return make_tuple(edges, STrev.first, STrev.second);
 }
+
+NisseAnalysis::Result BallAnalysis::run(llvm::Function &F,
+                                         llvm::FunctionAnalysisManager &FAM) {
+
+  auto edges = this->generateEdges(F);
+
+  auto STrev = this->generateSTrev(F, edges);
+
+  printGraph(F, edges, STrev);
+
+  return make_tuple(edges, STrev.first, STrev.second);
+}
+
 } // namespace nisse

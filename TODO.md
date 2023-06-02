@@ -14,7 +14,10 @@
 - [x] wait for code review
 - [x] Call break crit edge in pass
 - [x] Remove NissePassPrint
-
 - [x] loop analysis
-- [ ] analyse time
+- [x] analyse time
+
+- [ ] read doc + create test suite
 - [ ] extend analysis
+- [ ] diamond pattern
+- [ ] more patterns

@@ -22,10 +22,15 @@
 
 #include "Nisse.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Support/CommandLine.h"
 #include <iostream>
 
 using namespace llvm;
 using namespace std;
+
+static cl::opt<bool>
+    DisableProfilePrinting("nisse-disable-print", cl::init(false), cl::Hidden,
+                           cl::desc("Disable Profile Printing"));
 
 namespace nisse {
 
@@ -109,7 +114,8 @@ PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
     p.insertIncrFn(i++, counterInst);
   }
 
-  this->insertExitFn(F, counterInst, indexInst, size);
+  if (!DisableProfilePrinting)
+    this->insertExitFn(F, counterInst, indexInst, size);
 
   return PreservedAnalyses::all();
 }
@@ -135,7 +141,8 @@ PreservedAnalyses BallPass::run(Function &F, FunctionAnalysisManager &FAM) {
     p.insertIncrFn(i++, counterInst);
   }
 
-  this->insertExitFn(F, counterInst, indexInst, size);
+  if (!DisableProfilePrinting)
+    this->insertExitFn(F, counterInst, indexInst, size);
 
   return PreservedAnalyses::all();
 }

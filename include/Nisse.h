@@ -65,7 +65,7 @@ private:
   /// \brief Instruments the edge with a well-founded loop counter.
   /// \param i The index of the array to increment.
   /// \param inst The instruction to the counter-array.
-  void insertLoopIncrFn(int i, llvm::Value *inst);
+  void insertWellFoundedIncrFn(int i, llvm::Value *inst);
 
   /// \brief Casts a value to i32.
   /// \param inst The value to cast.
@@ -206,8 +206,20 @@ struct NisseAnalysis : public llvm::AnalysisInfoMixin<NisseAnalysis> {
       std::tuple<std::multiset<Edge>, std::multiset<Edge>, std::multiset<Edge>>;
 
 private:
-  void identifyInductionVariables(llvm::Loop *L, llvm::ScalarEvolution &SE,
-                                  std::multiset<Edge> &edges);
+  bool identifyInductionVariable(llvm::ScalarEvolution &SE,
+                                 std::multiset<Edge> &edges, llvm::PHINode *PHI,
+                                 BlockPtr incomingBlock, BlockPtr backBlock,
+                                 Edge &backEdge,
+                                 llvm::SmallVector<BlockPtr> &exitBlocks);
+
+  bool identifyBranchVariable(llvm::ScalarEvolution &SE,
+                              std::multiset<Edge> &edges, llvm::PHINode *PHI,
+                              BlockPtr incomingBlock, BlockPtr backBlock,
+                              llvm::SmallVector<BlockPtr> &exitBlocks,
+                              llvm::DominatorTree &DT);
+
+  void identifyWellFoundedEdges(llvm::Loop *L, llvm::ScalarEvolution &SE,
+                                std::multiset<Edge> &edges);
 
 protected:
   /// \brief Generates the set of edges of a function's CFG.

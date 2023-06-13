@@ -84,7 +84,7 @@ Value *Edge::createInt32Cast(llvm::Value *inst, IRBuilder<> &builder) {
   return inst;
 }
 
-void Edge::insertLoopIncrFn(int i, Value *inst) {
+void Edge::insertWellFoundedIncrFn(int i, Value *inst) {
   for (auto block : this->exitBlocks) {
     auto instruction = &*block->getFirstInsertionPt();
     IRBuilder<> builder(instruction);
@@ -109,7 +109,7 @@ void Edge::insertLoopIncrFn(int i, Value *inst) {
 
 void Edge::insertIncrFn(int i, Value *inst) {
   if (this->isBackEdge) {
-    this->insertLoopIncrFn(i, inst);
+    this->insertWellFoundedIncrFn(i, inst);
   } else {
     this->insertSimpleIncrFn(i, inst);
   }
@@ -120,8 +120,8 @@ int Edge::getIndex() const { return this->index; }
 string Edge::getName() const { return to_string(this->index); }
 
 bool Edge::operator==(const Edge &e) const {
-  return this->origin->getName() == e.origin->getName() &&
-         this->dest->getName() == e.dest->getName();
+  return this->origin == e.origin &&
+         this->dest == e.dest;
 }
 
 bool Edge::operator<(const Edge &e) const {

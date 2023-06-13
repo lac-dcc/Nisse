@@ -73,7 +73,7 @@ void NissePass::insertExitFn(llvm::Function &F, llvm::Value *counterInst,
 
   a_types.push_back(builder.getInt8PtrTy());
   llvm::StringRef function_name = insertion_point->getFunction()->getName();
-  a_vals.push_back(builder.CreateGlobalStringPtr(function_name, "str"));
+  a_vals.push_back(builder.CreateGlobalStringPtr(function_name));
 
   a_types.push_back(builder.getInt32Ty());
   a_vals.push_back(builder.getInt32(function_name.size()));

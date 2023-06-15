@@ -206,18 +206,45 @@ struct NisseAnalysis : public llvm::AnalysisInfoMixin<NisseAnalysis> {
       std::tuple<std::multiset<Edge>, std::multiset<Edge>, std::multiset<Edge>>;
 
 private:
+  /// @brief Identifies if a PHI node defines a well founded induction variable (It
+  /// is modified by a constant value each iteration of the loop). It also
+  /// modifies the corresponding edge in edges.
+  /// @param SE The function's scalar evolution.
+  /// @param edges The CFG's edges.
+  /// @param PHI The PHI node to analyse.
+  /// @param incomingBlock The loop's incoming block.
+  /// @param backBlock The outgoing block of the loop's back edge.
+  /// @param backEdge The loop's back edge.
+  /// @param exitBlocks The loop's exit blocks.
+  /// @return true if the variable is a well founded induction variable.
   bool identifyInductionVariable(llvm::ScalarEvolution &SE,
                                  std::multiset<Edge> &edges, llvm::PHINode *PHI,
                                  BlockPtr incomingBlock, BlockPtr backBlock,
                                  Edge &backEdge,
                                  llvm::SmallVector<BlockPtr> &exitBlocks);
 
+  /// @brief Identifies if a PHI node defines a well founded branch variable (It
+  /// is modified by a constant value each time the loop goes through a set of
+  /// control-equivalent blocks). It also modifies the corresponding edge in
+  /// edges.
+  /// @param SE The function's scalar evolution.
+  /// @param edges The CFG's edges.
+  /// @param PHI The PHI node to analyse.
+  /// @param incomingBlock The loop's incoming block.
+  /// @param backBlock The outgoing block of the loop's back edge.
+  /// @param exitBlocks The loop's exit blocks.
+  /// @param DT The function's dominator tree.
+  /// @return true if the variable is a well founded branch variable.
   bool identifyBranchVariable(llvm::ScalarEvolution &SE,
                               std::multiset<Edge> &edges, llvm::PHINode *PHI,
                               BlockPtr incomingBlock, BlockPtr backBlock,
                               llvm::SmallVector<BlockPtr> &exitBlocks,
                               llvm::DominatorTree &DT);
 
+  /// @brief Identifies well founded edges for Nisse instrumentation.
+  /// @param L Loop to instrument.
+  /// @param SE The function's scalar evolution.
+  /// @param edges The CFG's edges.
   void identifyWellFoundedEdges(llvm::Loop *L, llvm::ScalarEvolution &SE,
                                 std::multiset<Edge> &edges);
 

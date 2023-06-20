@@ -35,9 +35,13 @@ void Edge::setWellFoundedValues(llvm::Value *indVar, llvm::Value *initValue,
                                 const llvm::APInt *incrValue,
                                 llvm::SmallVector<BlockPtr> &exitBlocks,
                                 int weight) {
+  auto incr = incrValue->signedRoundToDouble();
+  if (this->isBackEdge &&
+      (this->incrValue == 1 || abs(this->incrValue) < abs(incr)))
+    return;
   this->indVar = indVar;
   this->initValue = initValue;
-  this->incrValue = incrValue->signedRoundToDouble();
+  this->incrValue = incr;
   this->exitBlocks = exitBlocks;
   this->weight = weight;
   this->isBackEdge = true;
@@ -97,10 +101,22 @@ void Edge::insertWellFoundedIncrFn(int i, Value *inst) {
     auto inst = builder.CreateLoad(int32Ty, inst1);
     auto indVarCast = this->createInt32Cast(indVar, builder);
     auto initValueCast = this->createInt32Cast(initValue, builder);
-    auto inst3 = builder.CreateSub(indVarCast, initValueCast);
+    Value *incr;
+    switch ((int)incrValue) {
+    case 1:
+      incr = builder.CreateSub(indVarCast, initValueCast);
+      break;
 
-    auto incr0 = builder.CreateSDiv(inst3, incrValueCst);
-    auto incr = builder.CreateIntCast(incr0, builder.getInt32Ty(), true);
+    case -1:
+      incr = builder.CreateSub(initValueCast, indVarCast);
+      break;
+
+    default:
+      auto inst3 = builder.CreateSub(indVarCast, initValueCast);
+      auto incr0 = builder.CreateSDiv(inst3, incrValueCst);
+      incr = builder.CreateIntCast(incr0, builder.getInt32Ty(), true);
+      break;
+    }
 
     auto inst4 = builder.CreateAdd(inst, incr);
     builder.CreateStore(inst4, inst1);
@@ -120,8 +136,7 @@ int Edge::getIndex() const { return this->index; }
 string Edge::getName() const { return to_string(this->index); }
 
 bool Edge::operator==(const Edge &e) const {
-  return this->origin == e.origin &&
-         this->dest == e.dest;
+  return this->origin == e.origin && this->dest == e.dest;
 }
 
 bool Edge::operator<(const Edge &e) const {

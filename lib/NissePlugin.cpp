@@ -44,12 +44,14 @@ bool registerPipeline(StringRef Name, FunctionPassManager &FPM,
                       ArrayRef<PassBuilder::PipelineElement>) {
 
   if (Name == "nisse") {
+    FPM.addPass(LoopSimplifyPass());
     FPM.addPass(BreakCriticalEdgesPass());
     FPM.addPass(nisse::NissePass());
     return true;
   }
 
   if (Name == "ball") {
+    FPM.addPass(LoopSimplifyPass());
     FPM.addPass(BreakCriticalEdgesPass());
     FPM.addPass(nisse::BallPass());
     return true;

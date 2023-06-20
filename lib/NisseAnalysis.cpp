@@ -99,6 +99,24 @@ NisseAnalysis::generateSTrev(Function &F, multiset<Edge> &edges) {
   return pair(ST, rev);
 }
 
+bool NisseAnalysis::IsSESEregion(const BlockPtr &B1, const BlockPtr &B2) {
+  if (!((DT.dominates(B1, B2) && PDT.dominates(B2, B1)) ||
+        (PDT.dominates(B1, B2) && DT.dominates(B2, B1))))
+    return false;
+  if (CI.getCycle(B1) != CI.getCycle(B2))
+    return false;
+  return true;
+}
+
+void NisseAnalysis::initFunctionInfo(Function &F,
+                                     FunctionAnalysisManager &FAM) {
+  this->SE = &FAM.getResult<ScalarEvolutionAnalysis>(F);
+  this->DT.recalculate(F);
+  this->PDT.recalculate(F);
+  this->LI.analyze(DT);
+  this->CI.compute(F);
+}
+
 bool NisseAnalysis::identifyInductionVariable(
     ScalarEvolution &SE, multiset<Edge> &edges, PHINode *PHI,
     BlockPtr incomingBlock, BlockPtr backBlock, Edge &backEdge,
@@ -133,8 +151,7 @@ bool NisseAnalysis::identifyBranchVariable(ScalarEvolution &SE,
                                            multiset<Edge> &edges, PHINode *PHI,
                                            BlockPtr incomingBlock,
                                            BlockPtr backBlock,
-                                           SmallVector<BlockPtr> &exitBlocks,
-                                           DominatorTree &DT) {
+                                           SmallVector<BlockPtr> &exitBlocks) {
   long value = 0;
   set<Value *> definitions;
   queue<Value *> queue;
@@ -174,8 +191,7 @@ bool NisseAnalysis::identifyBranchVariable(ScalarEvolution &SE,
         }
         if (constantOp != -1) {
           if (opBlock != nullptr) {
-            if (!(DT.dominates(opBlock, BIN->getParent()) &&
-                  DT.dominates(BIN->getParent(), opBlock))) {
+            if (!IsSESEregion(opBlock, BIN->getParent())) {
               return false;
             }
           } else
@@ -223,14 +239,13 @@ void NisseAnalysis::identifyWellFoundedEdges(Loop *L, ScalarEvolution &SE,
   SmallVector<BlockPtr> exitBlocks;
   L->getExitBlocks(exitBlocks);
   auto firstBlock = incomingBlock->getSingleSuccessor();
-  DominatorTree DT(*firstBlock->getParent());
   Edge backEdge(backBlock, firstBlock, -1);
   for (auto &PHI : firstBlock->phis()) {
     if (identifyInductionVariable(SE, edges, &PHI, incomingBlock, backBlock,
                                   backEdge, exitBlocks))
       continue;
     if (identifyBranchVariable(SE, edges, &PHI, incomingBlock, backBlock,
-                               exitBlocks, DT))
+                               exitBlocks))
       continue;
   }
 }
@@ -277,13 +292,10 @@ NisseAnalysis::Result NisseAnalysis::run(Function &F,
 
   auto edges = this->generateEdges(F);
 
-  ScalarEvolution &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
-
-  DominatorTree DT(F);
-  LoopInfo LI(DT);
+  initFunctionInfo(F, FAM);
   auto loops = LI.getLoopsInPreorder();
   for (auto loop : loops) {
-    identifyWellFoundedEdges(loop, SE, edges);
+    identifyWellFoundedEdges(loop, *SE, edges);
   }
 
   auto STrev = this->generateSTrev(F, edges);

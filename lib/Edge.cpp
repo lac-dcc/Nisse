@@ -31,12 +31,11 @@ BlockPtr Edge::getOrigin() const { return this->origin; }
 
 BlockPtr Edge::getDest() const { return this->dest; }
 
-void Edge::setWellFoundedValues(llvm::Value *indVar, llvm::Value *initValue,
-                                const llvm::APInt *incrValue,
-                                llvm::SmallVector<BlockPtr> &exitBlocks,
-                                int weight) {
+void Edge::setSESE(llvm::Value *indVar, llvm::Value *initValue,
+                   const llvm::APInt *incrValue,
+                   llvm::SmallVector<BlockPtr> &exitBlocks, int weight) {
   auto incr = incrValue->signedRoundToDouble();
-  if (this->isBackEdge &&
+  if (this->flagSESE &&
       (this->incrValue == 1 || abs(this->incrValue) < abs(incr)))
     return;
   this->indVar = indVar;
@@ -44,8 +43,10 @@ void Edge::setWellFoundedValues(llvm::Value *indVar, llvm::Value *initValue,
   this->incrValue = incr;
   this->exitBlocks = exitBlocks;
   this->weight = weight;
-  this->isBackEdge = true;
+  this->flagSESE = true;
 }
+
+bool Edge::isSESE() { return this->flagSESE; }
 
 Instruction *Edge::getInstrumentationPoint() const {
   Instruction *instr;
@@ -124,7 +125,7 @@ void Edge::insertWellFoundedIncrFn(int i, Value *inst) {
 }
 
 void Edge::insertIncrFn(int i, Value *inst) {
-  if (this->isBackEdge) {
+  if (this->flagSESE) {
     this->insertWellFoundedIncrFn(i, inst);
   } else {
     this->insertSimpleIncrFn(i, inst);

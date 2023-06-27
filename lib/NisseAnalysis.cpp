@@ -22,6 +22,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Nisse.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -35,6 +36,11 @@
 #include <fstream>
 #include <queue>
 #include <regex>
+
+#define DEBUG_TYPE "nisse" // This goes after any #includes.
+STATISTIC(NumCounters, "The # of counters");
+STATISTIC(SESECounters, "The # of SESE counters found");
+STATISTIC(SESEUsed, "The # of SESE counters used");
 
 using namespace llvm;
 using namespace std;
@@ -93,13 +99,17 @@ NisseAnalysis::generateSTrev(Function &F, multiset<Edge> &edges) {
       ST.insert(e);
       uf.merge(BB1, BB2);
     } else {
+      NumCounters++;
+      if (e.isSESE()) {
+        SESEUsed++;
+      }
       rev.insert(e);
     }
   }
   return pair(ST, rev);
 }
 
-bool NisseAnalysis::IsSESEregion(const BlockPtr &B1, const BlockPtr &B2) {
+bool NisseAnalysis::IsSESERegion(const BlockPtr &B1, const BlockPtr &B2) {
   if (!((DT.dominates(B1, B2) && PDT.dominates(B2, B1)) ||
         (PDT.dominates(B1, B2) && DT.dominates(B2, B1))))
     return false;
@@ -139,7 +149,7 @@ bool NisseAnalysis::identifyInductionVariable(
     if (e == backEdge) {
       edges.erase(e);
       Edge new_e = e;
-      new_e.setWellFoundedValues(IndVar, val, IncrementValue, exitBlocks);
+      new_e.setSESE(IndVar, val, IncrementValue, exitBlocks);
       edges.insert(new_e);
       return true;
     }
@@ -191,7 +201,7 @@ bool NisseAnalysis::identifyBranchVariable(ScalarEvolution &SE,
         }
         if (constantOp != -1) {
           if (opBlock != nullptr) {
-            if (!IsSESEregion(opBlock, BIN->getParent())) {
+            if (!IsSESERegion(opBlock, BIN->getParent())) {
               return false;
             }
           } else
@@ -222,9 +232,8 @@ bool NisseAnalysis::identifyBranchVariable(ScalarEvolution &SE,
     if (e == *edge) {
       edges.erase(e);
       Edge new_e = e;
-      new_e.setWellFoundedValues(PHI,
-                                 PHI->getIncomingValueForBlock(incomingBlock),
-                                 new APInt(64, value, true), exitBlocks);
+      new_e.setSESE(PHI, PHI->getIncomingValueForBlock(incomingBlock),
+                    new APInt(64, value, true), exitBlocks);
       edges.insert(new_e);
       return true;
     }
@@ -242,11 +251,15 @@ void NisseAnalysis::identifyWellFoundedEdges(Loop *L, ScalarEvolution &SE,
   Edge backEdge(backBlock, firstBlock, -1);
   for (auto &PHI : firstBlock->phis()) {
     if (identifyInductionVariable(SE, edges, &PHI, incomingBlock, backBlock,
-                                  backEdge, exitBlocks))
+                                  backEdge, exitBlocks)) {
+      SESECounters++;
       continue;
+    }
     if (identifyBranchVariable(SE, edges, &PHI, incomingBlock, backBlock,
-                               exitBlocks))
+                               exitBlocks)) {
+      SESECounters++;
       continue;
+    }
   }
 }
 

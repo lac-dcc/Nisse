@@ -31,7 +31,7 @@ int test2(int x) {
 }
 
 int main() {
-  for (int i = 0; i<5; i++) {
+  for (int i = 0; i<10; i++) {
     test2(i);
   }
   test3(0);

@@ -16,8 +16,8 @@
 - [x] Remove NissePassPrint
 - [x] loop analysis
 - [x] analyse time
+- [x] read doc + create test suite
+- [x] extend analysis
+- [x] llvm stats (SESE counter, SESE used, simple induction vars (single phi node))
 
-- [ ] read doc + create test suite
-- [ ] extend analysis
-- [ ] diamond pattern
-- [ ] more patterns
+- [ ] test suite??? (https://github.com/lac-dcc/Benchmarks)

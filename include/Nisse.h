@@ -48,8 +48,8 @@ private:
   int index;       ///< Index of the edge.
   int weight;      ///< An expectation of how often this edge will be executed.
 
-  bool isBackEdge; ///< User Defined flag to use if the edge is the back edge of
-                   ///< a well-founded loop.
+  bool flagSESE; ///< Flag to use if the edge is instrumenting a SESE region.
+
   llvm::Value *indVar;
   ///< User defined induction variable (for well-founded loops).
   llvm::Value *initValue;
@@ -92,7 +92,7 @@ public:
   /// executed.
   Edge(BlockPtr origin, BlockPtr dest, int index, int weight = 1)
       : origin(origin), dest(dest), index(index), weight(weight),
-        isBackEdge(false){};
+        flagSESE(false){};
 
   /// \brief Getter for the destination of the edge.
   /// \return The destination of the edge.
@@ -108,10 +108,12 @@ public:
   /// \param incrVal The induction variable's increment.
   /// \param exitBlocks The loop's exit blocks.
   /// \param weight The edge's new weight.
-  void setWellFoundedValues(llvm::Value *indVar, llvm::Value *initValue,
-                            const llvm::APInt *incrVal,
-                            llvm::SmallVector<BlockPtr> &exitBlocks,
-                            int weight = 0);
+  void setSESE(llvm::Value *indVar, llvm::Value *initValue,
+               const llvm::APInt *incrVal,
+               llvm::SmallVector<BlockPtr> &exitBlocks, int weight = 0);
+
+  /// \brief Sets the variables for a well founded loop's back edge.
+  bool isSESE();
 
   /// \brief Instruments the edge.
   /// \param i The index of the array to increment.
@@ -216,7 +218,7 @@ private:
 
   void initFunctionInfo(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
-  bool IsSESEregion(const BlockPtr &B1, const BlockPtr &B2);
+  bool IsSESERegion(const BlockPtr &B1, const BlockPtr &B2);
 
   /// \brief Identifies if a PHI node defines a well founded induction variable
   /// (It is modified by a constant value each iteration of the loop). It also

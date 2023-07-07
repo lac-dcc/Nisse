@@ -94,7 +94,6 @@ void NissePass::insertExitFn(llvm::Function &F, llvm::Value *counterInst,
 }
 
 PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
-  errs() << "NissePass\n";
   auto &edges = FAM.getResult<NisseAnalysis>(F);
   auto &reverseSTEdges = get<2>(edges);
   int size = reverseSTEdges.size();
@@ -121,8 +120,6 @@ PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
 }
 
 PreservedAnalyses BallPass::run(Function &F, FunctionAnalysisManager &FAM) {
-  errs() << "BallPass\n";
-
   auto &edges = FAM.getResult<BallAnalysis>(F);
   auto &reverseSTEdges = get<2>(edges);
   int size = reverseSTEdges.size();

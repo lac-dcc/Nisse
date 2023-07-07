@@ -170,8 +170,8 @@ std::ostream &operator<<(std::ostream &os, const Edge &e) {
   // if (!e.getDest()->hasName())
   //   e.setDestName();
   os << to_string(e.getIndex()) << string(" ")
-     << NisseAnalysis::removebb(e.getOrigin()->getName().str()) << string(" ")
-     << NisseAnalysis::removebb(e.getDest()->getName().str());
+     << AnalysisUtil::removebb(e.getOrigin()->getName().str()) << string(" ")
+     << AnalysisUtil::removebb(e.getDest()->getName().str());
   return os;
 }
 

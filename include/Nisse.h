@@ -166,10 +166,6 @@ public:
   friend std::ostream &operator<<(std::ostream &os, const Edge &e);
 };
 
-/// \brief The return type of the analysis pass.
-using Result =
-    std::tuple<std::multiset<Edge>, std::multiset<Edge>, std::multiset<Edge>>;
-
 /// \struct UnionFind
 ///
 /// \brief Implements union-find structure for Kruskal's Maximal Spanning Tree
@@ -299,6 +295,10 @@ private:
                                 std::multiset<Edge> &edges);
 
 public:
+  /// \brief The return type of the analysis pass.
+  using Result =
+      std::tuple<std::multiset<Edge>, std::multiset<Edge>, std::multiset<Edge>>;
+
   /// \brief A special type used by analysis passes to provide an address that
   /// identifies that particular analysis pass type.
   static llvm::AnalysisKey Key;
@@ -308,7 +308,7 @@ public:
   /// \param FAM The current FunctionAnalysisManager.
   /// \return A triple with the set of edges in F, a maximum spanning tree, and
   /// its complementary.
-  nisse::Result run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
+  Result run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 };
 
 /// \struct NissePass
@@ -346,6 +346,10 @@ public:
 /// \brief Computes the maximum spanning tree of a function's CFG
 struct BallAnalysis : public llvm::AnalysisInfoMixin<BallAnalysis> {
 
+  /// \brief The return type of the analysis pass.
+  using Result =
+      std::tuple<std::multiset<Edge>, std::multiset<Edge>, std::multiset<Edge>>;
+
   /// \brief A special type used by analysis passes to provide an address that
   /// identifies that particular analysis pass type.
   static llvm::AnalysisKey Key;
@@ -355,7 +359,7 @@ struct BallAnalysis : public llvm::AnalysisInfoMixin<BallAnalysis> {
   /// \param FAM The current FunctionAnalysisManager.
   /// \return A triple with the set of edges in F, a maximum spanning tree, and
   /// its complementary.
-  nisse::Result run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
+  Result run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 };
 
 /// \brief Instruments a function for Ball-Larus edge instrumentation.

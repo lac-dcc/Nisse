@@ -73,6 +73,8 @@ string AnalysisUtil::removebb(const string &s) {
 
 // Initialize the analysis key.
 AnalysisKey NisseAnalysis::Key;
+// Initialize the analysis key.
+AnalysisKey BallAnalysis::Key;
 
 multiset<Edge> AnalysisUtil::generateEdges(Function &F) {
   multiset<Edge> edges;
@@ -305,7 +307,7 @@ void AnalysisUtil::printGraph(Function &F, multiset<Edge> &edges,
   file.close();
 }
 
-Result NisseAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
+NisseAnalysis::Result NisseAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
 
   auto edges = AnalysisUtil::generateEdges(F);
 
@@ -317,19 +319,17 @@ Result NisseAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
 
   auto STrev = AnalysisUtil::generateSTrev(F, edges);
 
-  errs() << "NisseAnalysis\n";
   AnalysisUtil::printGraph(F, edges, STrev);
 
   return make_tuple(edges, STrev.first, STrev.second);
 }
 
-Result BallAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
+BallAnalysis::Result BallAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
 
   auto edges = AnalysisUtil::generateEdges(F);
 
   auto STrev = AnalysisUtil::generateSTrev(F, edges);
 
-  errs() << "BallAnalysis\n";
   AnalysisUtil::printGraph(F, edges, STrev);
 
   return make_tuple(edges, STrev.first, STrev.second);

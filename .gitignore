@@ -3,3 +3,4 @@ tests/*.profiling/
 rapport/*
 res/*
 res2/*
+err.txt

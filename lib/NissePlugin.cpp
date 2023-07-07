@@ -32,6 +32,7 @@ using namespace llvm;
 /// analyses created, so any pass can request their results.
 void registerAnalyses(FunctionAnalysisManager &FAM) {
   FAM.registerPass([] { return nisse::NisseAnalysis(); });
+  FAM.registerPass([] { return nisse::BallAnalysis(); });
 }
 
 /// Takes the \p Name of a transformation pass and check if it is the name of

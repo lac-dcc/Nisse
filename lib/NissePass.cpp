@@ -25,12 +25,12 @@
 #include "llvm/Support/CommandLine.h"
 #include <iostream>
 
+static llvm::cl::opt<bool>
+    DisableProfilePrinting("nisse-disable-print", llvm::cl::init(false),
+                           llvm::cl::desc("Disable Profile Printing"));
+
 using namespace llvm;
 using namespace std;
-
-static cl::opt<bool>
-    DisableProfilePrinting("nisse-disable-print", cl::init(false), cl::Hidden,
-                           cl::desc("Disable Profile Printing"));
 
 namespace nisse {
 
@@ -62,7 +62,7 @@ NissePass::insertEntryFn(Function &F, multiset<Edge> &reverseSTEdges) {
 
 void NissePass::insertExitFn(llvm::Function &F, llvm::Value *counterInst,
                              llvm::Value *indexInst, int size) {
-  BlockPtr BB = NisseAnalysis::findReturnBlock(F);
+  BlockPtr BB = AnalysisUtil::findReturnBlock(F);
   auto insertion_point = BB->getTerminator();
   IRBuilder<> builder(insertion_point);
 
@@ -94,7 +94,7 @@ void NissePass::insertExitFn(llvm::Function &F, llvm::Value *counterInst,
 }
 
 PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
-
+  errs() << "NissePass\n";
   auto &edges = FAM.getResult<NisseAnalysis>(F);
   auto &reverseSTEdges = get<2>(edges);
   int size = reverseSTEdges.size();
@@ -121,6 +121,7 @@ PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
 }
 
 PreservedAnalyses BallPass::run(Function &F, FunctionAnalysisManager &FAM) {
+  errs() << "BallPass\n";
 
   auto &edges = FAM.getResult<BallAnalysis>(F);
   auto &reverseSTEdges = get<2>(edges);

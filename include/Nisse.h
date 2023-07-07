@@ -67,7 +67,7 @@ private:
   /// \brief Instruments the edge with a well-founded loop counter.
   /// \param i The index of the array to increment.
   /// \param inst The instruction to the counter-array.
-  void insertWellFoundedIncrFn(int i, llvm::Value *inst);
+  void insertSESEIncrFn(int i, llvm::Value *inst);
 
   /// \brief Casts a value to i32.
   /// \param inst The value to cast.
@@ -166,6 +166,10 @@ public:
   friend std::ostream &operator<<(std::ostream &os, const Edge &e);
 };
 
+/// \brief The return type of the analysis pass.
+using Result =
+    std::tuple<std::multiset<Edge>, std::multiset<Edge>, std::multiset<Edge>>;
+
 /// \struct UnionFind
 ///
 /// \brief Implements union-find structure for Kruskal's Maximal Spanning Tree
@@ -199,15 +203,48 @@ public:
   bool connected(void *x, void *y);
 };
 
+struct AnalysisUtil {
+public:
+  /// \brief Find the return block of a function.
+  /// \param F The function to find the return block of.
+  /// \return The return block.
+  static BlockPtr findReturnBlock(llvm::Function &F);
+
+  /// \brief Returns the number corresponding to the block name give in argument
+  /// (bbX -> X, bb -> 0)
+  /// \param s String to get the corresponding number of
+  /// \return the corresponding number
+  static std::string removebb(const std::string &s);
+
+  /// \brief Generates the set of edges of a function's CFG.
+  /// \param F The function to compute the edges of.
+  /// \return a vector containing the edges of F.
+  static std::multiset<Edge> generateEdges(llvm::Function &F);
+
+  /// \brief Generates the maximum spanning tree of a set of F's edges.
+  /// \param F The function the edges belong to.
+  /// \param edges The set of edges to generate the maximum spanning tree of.
+  /// \return A pair of the set of edges in the spanning tree and the set of
+  /// edges in its complementary.
+  static std::pair<std::multiset<Edge>, std::multiset<Edge>>
+  generateSTrev(llvm::Function &F, std::multiset<Edge> &edges);
+
+  /// \brief Saves the CFG, the Spanning Tree and the instrumented edges to a
+  /// file.
+  /// \param F The function the edges belong to.
+  /// \param edges The set of edges to generate the maximum spanning tree of.
+  /// \param STrev the set of edges in the spanning tree and the set of
+  /// edges in its complementary.
+  static void
+  printGraph(llvm::Function &F, std::multiset<Edge> &edges,
+             std::pair<std::multiset<Edge>, std::multiset<Edge>> &STrev);
+};
+
 /// \struct NisseAnalysis
 ///
 /// \brief Computes the maximum spanning tree of a function's CFG
 /// \see Edge, UnionFind
 struct NisseAnalysis : public llvm::AnalysisInfoMixin<NisseAnalysis> {
-
-  /// \brief The return type of the analysis pass.
-  using Result =
-      std::tuple<std::multiset<Edge>, std::multiset<Edge>, std::multiset<Edge>>;
 
 private:
   llvm::ScalarEvolution *SE;
@@ -261,51 +298,17 @@ private:
   void identifyWellFoundedEdges(llvm::Loop *L, llvm::ScalarEvolution &SE,
                                 std::multiset<Edge> &edges);
 
-protected:
-  /// \brief Generates the set of edges of a function's CFG.
-  /// \param F The function to compute the edges of.
-  /// \return a vector containing the edges of F.
-  std::multiset<Edge> generateEdges(llvm::Function &F);
-
-  /// \brief Generates the maximum spanning tree of a set of F's edges.
-  /// \param F The function the edges belong to.
-  /// \param edges The set of edges to generate the maximum spanning tree of.
-  /// \return A pair of the set of edges in the spanning tree and the set of
-  /// edges in its complementary.
-  std::pair<std::multiset<Edge>, std::multiset<Edge>>
-  generateSTrev(llvm::Function &F, std::multiset<Edge> &edges);
-
-  /// \brief Saves the CFG, the Spanning Tree and the instrumented edges to a
-  /// file.
-  /// \param F The function the edges belong to.
-  /// \param edges The set of edges to generate the maximum spanning tree of.
-  /// \param STrev the set of edges in the spanning tree and the set of
-  /// edges in its complementary.
-  void printGraph(llvm::Function &F, std::multiset<Edge> &edges,
-                  std::pair<std::multiset<Edge>, std::multiset<Edge>> &STrev);
-
 public:
   /// \brief A special type used by analysis passes to provide an address that
   /// identifies that particular analysis pass type.
   static llvm::AnalysisKey Key;
-
-  /// \brief Find the return block of a function.
-  /// \param F The function to find the return block of.
-  /// \return The return block.
-  static BlockPtr findReturnBlock(llvm::Function &F);
-
-  /// \brief Returns the number corresponding to the block name give in argument
-  /// (bbX -> X, bb -> 0)
-  /// \param s String to get the corresponding number of
-  /// \return the corresponding number
-  static std::string removebb(const std::string &s);
 
   /// \brief The analysis pass' run function.
   /// \param F The function to analyse.
   /// \param FAM The current FunctionAnalysisManager.
   /// \return A triple with the set of edges in F, a maximum spanning tree, and
   /// its complementary.
-  Result run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
+  nisse::Result run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 };
 
 /// \struct NissePass
@@ -341,13 +344,18 @@ public:
 };
 
 /// \brief Computes the maximum spanning tree of a function's CFG
-struct BallAnalysis : public NisseAnalysis {
+struct BallAnalysis : public llvm::AnalysisInfoMixin<BallAnalysis> {
+
+  /// \brief A special type used by analysis passes to provide an address that
+  /// identifies that particular analysis pass type.
+  static llvm::AnalysisKey Key;
+
   /// \brief The analysis pass' run function.
   /// \param F The function to analyse.
   /// \param FAM The current FunctionAnalysisManager.
   /// \return A triple with the set of edges in F, a maximum spanning tree, and
   /// its complementary.
-  Result run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
+  nisse::Result run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 };
 
 /// \brief Instruments a function for Ball-Larus edge instrumentation.

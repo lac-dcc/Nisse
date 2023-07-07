@@ -89,9 +89,9 @@ Value *Edge::createInt32Cast(llvm::Value *inst, IRBuilder<> &builder) {
   return inst;
 }
 
-void Edge::insertWellFoundedIncrFn(int i, Value *inst) {
+void Edge::insertSESEIncrFn(int i, Value *inst) {
   for (auto block : this->exitBlocks) {
-    auto instruction = &*block->getFirstInsertionPt();
+    Instruction *instruction = &*block->getFirstInsertionPt();
     IRBuilder<> builder(instruction);
     Type *int32Ty = builder.getInt32Ty();
     Value *indexList[] = {builder.getInt32(i)};
@@ -126,7 +126,7 @@ void Edge::insertWellFoundedIncrFn(int i, Value *inst) {
 
 void Edge::insertIncrFn(int i, Value *inst) {
   if (this->flagSESE) {
-    this->insertWellFoundedIncrFn(i, inst);
+    this->insertSESEIncrFn(i, inst);
   } else {
     this->insertSimpleIncrFn(i, inst);
   }
@@ -155,12 +155,20 @@ bool Edge::operator>(const Edge &e) const {
 bool Edge::compareWeights(const Edge &a, const Edge &b) { return b < a; }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Edge &e) {
+  // if (!e.getOrigin()->hasName())
+  //   e.setOriginName();
+  // if (!e.getDest()->hasName())
+  //   e.setDestName();
   os << e.getName() << " : " << e.getOrigin()->getName() << " -> "
      << e.getDest()->getName();
   return os;
 }
 
 std::ostream &operator<<(std::ostream &os, const Edge &e) {
+  // if (!e.getOrigin()->hasName())
+  //   e.setOriginName();
+  // if (!e.getDest()->hasName())
+  //   e.setDestName();
   os << to_string(e.getIndex()) << string(" ")
      << NisseAnalysis::removebb(e.getOrigin()->getName().str()) << string(" ")
      << NisseAnalysis::removebb(e.getDest()->getName().str());

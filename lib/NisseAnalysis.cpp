@@ -47,17 +47,20 @@ using namespace std;
 
 namespace nisse {
 
-BlockPtr NisseAnalysis::findReturnBlock(Function &F) {
+BlockPtr AnalysisUtil::findReturnBlock(Function &F) {
+  UnreachableInst *unreach = nullptr;
   for (BasicBlock &BB : F) {
     auto term = BB.getTerminator();
     if (isa<ReturnInst>(term)) {
       return &BB;
     }
+    if (auto *RI = dyn_cast<UnreachableInst>(term))
+      unreach = RI;
   }
-  return nullptr;
+  return unreach->getParent();
 }
 
-string NisseAnalysis::removebb(const string &s) {
+string AnalysisUtil::removebb(const string &s) {
   string sub = regex_replace(s, regex(R"([\D])"), "");
   if (sub.size() > 0) {
     if (regex_match(s, regex(".*crit.*"))) {
@@ -71,7 +74,7 @@ string NisseAnalysis::removebb(const string &s) {
 // Initialize the analysis key.
 AnalysisKey NisseAnalysis::Key;
 
-multiset<Edge> NisseAnalysis::generateEdges(Function &F) {
+multiset<Edge> AnalysisUtil::generateEdges(Function &F) {
   multiset<Edge> edges;
   int index = 0;
   for (auto &BB : F) {
@@ -84,7 +87,7 @@ multiset<Edge> NisseAnalysis::generateEdges(Function &F) {
 }
 
 pair<multiset<Edge>, multiset<Edge>>
-NisseAnalysis::generateSTrev(Function &F, multiset<Edge> &edges) {
+AnalysisUtil::generateSTrev(Function &F, multiset<Edge> &edges) {
   multiset<Edge> ST;
   multiset<Edge> rev;
   UnionFind uf;
@@ -131,6 +134,8 @@ bool NisseAnalysis::identifyInductionVariable(
     ScalarEvolution &SE, multiset<Edge> &edges, PHINode *PHI,
     BlockPtr incomingBlock, BlockPtr backBlock, Edge &backEdge,
     SmallVector<BlockPtr> &exitBlocks) {
+  if (!SE.isSCEVable(PHI->getType()))
+    return false;
   const SCEV *SCEV_PHI = SE.getSCEV(PHI);
   if (!SE.containsAddRecurrence(SCEV_PHI))
     return false;
@@ -263,8 +268,8 @@ void NisseAnalysis::identifyWellFoundedEdges(Loop *L, ScalarEvolution &SE,
   }
 }
 
-void NisseAnalysis::printGraph(Function &F, multiset<Edge> &edges,
-                               pair<multiset<Edge>, multiset<Edge>> &STrev) {
+void AnalysisUtil::printGraph(Function &F, multiset<Edge> &edges,
+                              pair<multiset<Edge>, multiset<Edge>> &STrev) {
 
   string fileName = F.getName().str() + ".graph";
 
@@ -277,7 +282,7 @@ void NisseAnalysis::printGraph(Function &F, multiset<Edge> &edges,
 
   file << blockCount;
   for (auto &BB : F) {
-    file << ' ' << NisseAnalysis::removebb(BB.getName().str());
+    file << ' ' << AnalysisUtil::removebb(BB.getName().str());
   }
   file << endl;
 
@@ -300,10 +305,9 @@ void NisseAnalysis::printGraph(Function &F, multiset<Edge> &edges,
   file.close();
 }
 
-NisseAnalysis::Result NisseAnalysis::run(Function &F,
-                                         FunctionAnalysisManager &FAM) {
+Result NisseAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
 
-  auto edges = this->generateEdges(F);
+  auto edges = AnalysisUtil::generateEdges(F);
 
   initFunctionInfo(F, FAM);
   auto loops = LI.getLoopsInPreorder();
@@ -311,21 +315,22 @@ NisseAnalysis::Result NisseAnalysis::run(Function &F,
     identifyWellFoundedEdges(loop, *SE, edges);
   }
 
-  auto STrev = this->generateSTrev(F, edges);
+  auto STrev = AnalysisUtil::generateSTrev(F, edges);
 
-  printGraph(F, edges, STrev);
+  errs() << "NisseAnalysis\n";
+  AnalysisUtil::printGraph(F, edges, STrev);
 
   return make_tuple(edges, STrev.first, STrev.second);
 }
 
-NisseAnalysis::Result BallAnalysis::run(Function &F,
-                                        FunctionAnalysisManager &FAM) {
+Result BallAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
 
-  auto edges = this->generateEdges(F);
+  auto edges = AnalysisUtil::generateEdges(F);
 
-  auto STrev = this->generateSTrev(F, edges);
+  auto STrev = AnalysisUtil::generateSTrev(F, edges);
 
-  printGraph(F, edges, STrev);
+  errs() << "BallAnalysis\n";
+  AnalysisUtil::printGraph(F, edges, STrev);
 
   return make_tuple(edges, STrev.first, STrev.second);
 }

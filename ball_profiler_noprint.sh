@@ -56,7 +56,7 @@ $LLVM_OPT -S -passes="mem2reg,instnamer" $LL_NAME -o $LL_NAME
 
 # Running the pass:
 #
-$LLVM_OPT -S -load-pass-plugin $MY_LLVM_LIB -passes="ball" -stats \
+$LLVM_OPT -S -load-pass-plugin $MY_LLVM_LIB -passes="ball" -nisse-disable-print -stats \
     $LL_NAME -o $PF_NAME
 
 # Print the instrumented CFG

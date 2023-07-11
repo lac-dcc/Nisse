@@ -39,6 +39,7 @@
 
 #define DEBUG_TYPE "nisse" // This goes after any #includes.
 STATISTIC(NumCounters, "The # of counters");
+STATISTIC(Loops, "The # of loops");
 STATISTIC(SESECounters, "The # of SESE counters found");
 STATISTIC(SESEUsed, "The # of SESE counters used");
 
@@ -314,6 +315,7 @@ NisseAnalysis::Result NisseAnalysis::run(Function &F, FunctionAnalysisManager &F
   initFunctionInfo(F, FAM);
   auto loops = LI.getLoopsInPreorder();
   for (auto loop : loops) {
+    Loops++;
     identifyWellFoundedEdges(loop, *SE, edges);
   }
 

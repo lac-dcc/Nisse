@@ -17,7 +17,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the implementation of the NisseAnalysis
+/// This file contains the implementation of NisseAnalysis, KSAnalysis and
+/// AnalysisUtils
 ///
 //===----------------------------------------------------------------------===//
 
@@ -75,7 +76,7 @@ string AnalysisUtil::removebb(const string &s) {
 // Initialize the analysis key.
 AnalysisKey NisseAnalysis::Key;
 // Initialize the analysis key.
-AnalysisKey BallAnalysis::Key;
+AnalysisKey KSAnalysis::Key;
 
 multiset<Edge> AnalysisUtil::generateEdges(Function &F) {
   multiset<Edge> edges;
@@ -129,7 +130,7 @@ void NisseAnalysis::initFunctionInfo(Function &F,
   this->SE = &FAM.getResult<ScalarEvolutionAnalysis>(F);
   this->DT.recalculate(F);
   this->PDT.recalculate(F);
-  this->LI.analyze(DT);
+  this->LI = LoopInfo(DT);
   this->CI.compute(F);
 }
 
@@ -308,14 +309,15 @@ void AnalysisUtil::printGraph(Function &F, multiset<Edge> &edges,
   file.close();
 }
 
-NisseAnalysis::Result NisseAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
+NisseAnalysis::Result NisseAnalysis::run(Function &F,
+                                         FunctionAnalysisManager &FAM) {
 
   auto edges = AnalysisUtil::generateEdges(F);
 
   initFunctionInfo(F, FAM);
   auto loops = LI.getLoopsInPreorder();
+  Loops += loops.size();
   for (auto loop : loops) {
-    Loops++;
     identifyWellFoundedEdges(loop, *SE, edges);
   }
 
@@ -326,7 +328,8 @@ NisseAnalysis::Result NisseAnalysis::run(Function &F, FunctionAnalysisManager &F
   return make_tuple(edges, STrev.first, STrev.second);
 }
 
-BallAnalysis::Result BallAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
+KSAnalysis::Result KSAnalysis::run(Function &F,
+                                       FunctionAnalysisManager &FAM) {
 
   auto edges = AnalysisUtil::generateEdges(F);
 

@@ -16,13 +16,13 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of the analysis used to apply the
-/// Ball-Larus edge profiling algorithm.
+/// This file contains the declarations used to apply the edge profiling
+/// algorithm.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef BALL_H
-#define BALL_H
+#ifndef NISSE_H
+#define NISSE_H
 
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
@@ -75,7 +75,7 @@ private:
   /// \return The casted value.
   llvm::Value *createInt32Cast(llvm::Value *inst, llvm::IRBuilder<> &builder);
 
-  /// \brief Computes the hook to insert the Ball-Larus counter.
+  /// \brief Computes the hook to insert the KS counter.
   /// If the source block terminates with an absolute jump, the counter is
   /// placed at the end of that block. If not, it is placed at the start of the
   /// destination block. If the hooked block is the entry block, the counter
@@ -335,16 +335,15 @@ protected:
 
 public:
   /// \brief The transformation pass' run function. Instruments the function
-  /// given as argument for Ball-Larus edge instrumentation.
+  /// given as argument for KS edge instrumentation.
   /// \param F The function to transform.
   /// \param FAM The current FunctionAnalysisManager.
-  /// \return ¯\_ (ツ)_/¯
   llvm::PreservedAnalyses run(llvm::Function &F,
                               llvm::FunctionAnalysisManager &FAM);
 };
 
 /// \brief Computes the maximum spanning tree of a function's CFG
-struct BallAnalysis : public llvm::AnalysisInfoMixin<BallAnalysis> {
+struct KSAnalysis : public llvm::AnalysisInfoMixin<KSAnalysis> {
 
   /// \brief The return type of the analysis pass.
   using Result =
@@ -362,13 +361,12 @@ struct BallAnalysis : public llvm::AnalysisInfoMixin<BallAnalysis> {
   Result run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 };
 
-/// \brief Instruments a function for Ball-Larus edge instrumentation.
-struct BallPass : public NissePass {
+/// \brief Instruments a function for KS edge instrumentation.
+struct KSPass : public NissePass {
   /// \brief The transformation pass' run function. Instruments the function
-  /// given as argument for Ball-Larus edge instrumentation.
+  /// given as argument for KS edge instrumentation.
   /// \param F The function to transform.
   /// \param FAM The current FunctionAnalysisManager.
-  /// \return ¯\_ (ツ)_/¯
   llvm::PreservedAnalyses run(llvm::Function &F,
                               llvm::FunctionAnalysisManager &FAM);
 };

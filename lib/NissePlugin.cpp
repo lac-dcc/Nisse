@@ -32,7 +32,7 @@ using namespace llvm;
 /// analyses created, so any pass can request their results.
 void registerAnalyses(FunctionAnalysisManager &FAM) {
   FAM.registerPass([] { return nisse::NisseAnalysis(); });
-  FAM.registerPass([] { return nisse::BallAnalysis(); });
+  FAM.registerPass([] { return nisse::KSAnalysis(); });
 }
 
 /// Takes the \p Name of a transformation pass and check if it is the name of
@@ -51,10 +51,10 @@ bool registerPipeline(StringRef Name, FunctionPassManager &FPM,
     return true;
   }
 
-  if (Name == "ball") {
+  if (Name == "ks") {
     FPM.addPass(LoopSimplifyPass());
     FPM.addPass(BreakCriticalEdgesPass());
-    FPM.addPass(nisse::BallPass());
+    FPM.addPass(nisse::KSPass());
     return true;
   }
 

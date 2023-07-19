@@ -119,8 +119,8 @@ PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
   return PreservedAnalyses::all();
 }
 
-PreservedAnalyses BallPass::run(Function &F, FunctionAnalysisManager &FAM) {
-  auto &edges = FAM.getResult<BallAnalysis>(F);
+PreservedAnalyses KSPass::run(Function &F, FunctionAnalysisManager &FAM) {
+  auto &edges = FAM.getResult<KSAnalysis>(F);
   auto &reverseSTEdges = get<2>(edges);
   int size = reverseSTEdges.size();
 

@@ -1,6 +1,6 @@
 # Nisse
-This repository contains a suite of LLVM passes that implement [Ball Larus Optimal Edge Profiling](https://dl.acm.org/doi/10.1145/183432.183527).
-To reduce the overhead of Ball-Larus instrumentation, we avoid inserting counters on loops with [well-founded](https://en.wikipedia.org/wiki/Well-founded_relation) induction variables.
+This repository contains a suite of LLVM passes that implement [Knuth, D.E., Stevenson, F.R. Optimal measurement points for program frequency counts.](https://doi.org/10.1007/BF01951942).
+To reduce the overhead of KS instrumentation, we avoid inserting counters on loops with [well-founded](https://en.wikipedia.org/wiki/Well-founded_relation) induction variables.
 
 # Build
 Nisse is implemented on top of LLVM.
@@ -29,7 +29,7 @@ This basic command will create a folder `file.c.profiling`.
 In that folder are 5 subfolders:
 * `compiled` contains 3 files:
   *  `file.ll` an IR file modified by the following LLVM passes: mem2reg, and instnamer.
-  *  `file.profiled.ll` an IR file instrumented with Ball-Larus counters.
+  *  `file.profiled.ll` an IR file instrumented with KS counters.
   *  `file` an executable file compiled from `file.profiled.ll`.
 * `profiles` contains the complete profile for each function. By default, if a function is called multiple times, the profile will contain the total execution. Adding an an extra argument to the `nisse_profiler.sh` script generates a separate profile for each execution instead.
 * `partial_profiles` contains the profile data obtained by the instrumentation for each function.

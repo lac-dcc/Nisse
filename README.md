@@ -1,6 +1,16 @@
+<p align="center">
+  </br>
+  <img alt="logo" src="./assets/logo.png" width="75%" height="auto"/>
+</p>
+
 # Nisse
-This repository contains a suite of LLVM passes that implement [Knuth, D.E., Stevenson, F.R. Optimal measurement points for program frequency counts.](https://doi.org/10.1007/BF01951942).
-To reduce the overhead of KS instrumentation, we avoid inserting counters on loops with [well-founded](https://en.wikipedia.org/wiki/Well-founded_relation) induction variables.
+
+An exact profiler inserts counters in a program to record how many times each edge of that program's control-flow graph has been traversed during an execution of it.
+It is common practice to instrument only edges in the complement of a minimum spanning tree of the program's control-flow graph, following the algorithm proposed by [Knuth and Stevenson](https://doi.org/10.1007/BF01951942) in 1973.
+This repository introduces a technique to reduce the overhead of exact profiling even more.
+It is possible to use the values of variables incremented by constant steps within loops (henceforth called affine variables) as a replacement for some counters.
+Such affine variables are common, for they include the induction variable of typical loops.
+This repository implements this technique in the [LLVM](https://llvm.org/) compilation infrastructure.
 
 # Build
 Nisse is implemented on top of LLVM.

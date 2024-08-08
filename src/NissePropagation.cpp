@@ -245,11 +245,17 @@ void outputCout(vpi &edges, vi &weights) {
 /// \param edges The graph's edges.
 /// \param weights The edge's weights.
 void outputFile(string filename, vpi &edges, vi &weights) {
-  ofstream file;
-  file.open(filename, ios::out | ios::app);
+  ofstream file, bbFile;
+  file.open(filename+".edges", ios::out | ios::app);
+  bbFile.open(filename+".bb", ios::out | ios::app);
 
   if (file.bad()) {
-    cout << "Could not open file " << filename << endl;
+    cout << "Could not open file " << filename+".edges" << endl;
+    outputCout(edges, weights);
+  }
+
+  if (bbFile.bad()) {
+    cout << "Could not open file " << filename+".bb" << endl;
     outputCout(edges, weights);
   }
 
@@ -259,8 +265,20 @@ void outputFile(string filename, vpi &edges, vi &weights) {
          << weights.at(i) << '\n';
   }
 
+  map<int,int> bbFrequency;
+  for (int i = 0; i < size; i++) {
+    if (edges[i].first == 0) bbFrequency[0] += weights[i];
+    bbFrequency[edges[i].second] += weights[i];
+  }
+
+  for (auto [bb, freq] : bbFrequency) {
+    bbFile << bb << " : " << freq << '\n';
+  }
+
   file << endl;
   file.close();
+  bbFile << endl;
+  bbFile.close();
 }
 
 /// \brief Propagates the weights given by edge instrumentation. If the graph is
@@ -319,7 +337,7 @@ int main(int argc, char **argv) {
 
     if (OutputFilename.size() > 0) {
       if (to_print) {
-        cout << "Writing '" << OutputFilename << "'...\n";
+        cout << "Writing '" << OutputFilename << "'... and\n";
         to_print = false;
       }
       outputFile(OutputFilename, edges, w);

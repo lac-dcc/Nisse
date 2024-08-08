@@ -99,7 +99,8 @@ for i in *.prof; do
   PROF_NAME="$i.full"
   $PROP_BIN $i $PROP_FLAG -o $PROF_NAME
   mv $i partial_profiles/
-  mv $PROF_NAME profiles/
+  mv $PROF_NAME.edges profiles/
+  mv $PROF_NAME.bb profiles/
 done
 
 # Move the files to apropriate folders

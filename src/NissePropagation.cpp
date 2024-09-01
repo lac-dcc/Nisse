@@ -247,15 +247,9 @@ void outputCout(vpi &edges, vi &weights) {
 void outputFile(string filename, vpi &edges, vi &weights) {
   ofstream file, bbFile;
   file.open(filename+".edges", ios::out | ios::app);
-  bbFile.open(filename+".bb", ios::out | ios::app);
 
   if (file.bad()) {
     cout << "Could not open file " << filename+".edges" << endl;
-    outputCout(edges, weights);
-  }
-
-  if (bbFile.bad()) {
-    cout << "Could not open file " << filename+".bb" << endl;
     outputCout(edges, weights);
   }
 
@@ -263,6 +257,16 @@ void outputFile(string filename, vpi &edges, vi &weights) {
   for (int i = 0; i < size; i++) {
     file << edges.at(i).first << " -> " << edges.at(i).second << " : "
          << weights.at(i) << '\n';
+  }
+
+  file << endl;
+  file.close();
+
+  bbFile.open(filename+".bb", ios::out | ios::app);
+
+  if (bbFile.bad()) {
+    cout << "Could not open file " << filename+".bb" << endl;
+    outputCout(edges, weights);
   }
 
   map<int,int> bbFrequency;
@@ -275,8 +279,6 @@ void outputFile(string filename, vpi &edges, vi &weights) {
     bbFile << bb << " : " << freq << '\n';
   }
 
-  file << endl;
-  file.close();
   bbFile << endl;
   bbFile.close();
 }

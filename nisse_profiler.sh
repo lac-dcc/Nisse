@@ -23,6 +23,7 @@ PROP_BIN=$BUILD_DIR/bin/propagation
 #
 DR_NAME="$(dirname $1)"
 cd $DR_NAME
+echo $(pwd)
 
 # File names:
 #
@@ -78,7 +79,7 @@ fi
 
 # Run the instrumented binary:
 #
-./$BS_NAME 0
+./$BS_NAME 3
 
 # Prepare the result folders
 #

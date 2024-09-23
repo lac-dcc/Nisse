@@ -63,13 +63,26 @@ BlockPtr AnalysisUtil::findReturnBlock(Function &F) {
 }
 
 string AnalysisUtil::removebb(const string &s) {
-  string sub = regex_replace(s, regex(R"([\D])"), "");
-  if (sub.size() > 0) {
-    if (regex_match(s, regex(".*crit.*"))) {
-      return "-" + sub;
+  string::size_type pos = s.find(".");
+  if (pos == string::npos) {
+    return (s.size() == 2 ? "0" : s.substr(2));
+  } else {
+    string bb1 = s.substr(0,pos);
+    bb1 = (bb1.size() == 2 ? "0" : bb1.substr(2));
+    string aux = s.substr(pos+1);
+    if (aux == "loopexit") {
+      return bb1+".le";
     }
-    return sub;
+    pos = aux.find("_");
+    string bb2 = aux.substr(0,pos), args = aux.substr(pos+1);
+    bb2 = (bb2.size() == 2 ? "0" : bb2.substr(2));
+    if (args == "crit_edge") {
+      return bb1+"_"+bb2+".ce";
+    } else {
+      return bb1+"_"+bb2+"."+args;
+    }
   }
+  
   return "0";
 }
 

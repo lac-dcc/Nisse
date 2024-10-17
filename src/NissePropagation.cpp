@@ -140,16 +140,22 @@ void initGraph(string input, vs &vertex, vps &edges, si &ST, si &revST, mss &in,
 /// given in the input file.
 vi initWeights(string input, int edgeCount, int instCount, bool debug) {
   vi weights(edgeCount, 0);
-  FILE *file = fopen((input+".prof").c_str(), "rb");
   // ifstream prof;
-  int sz;
+  // string buf;
   // prof.open(input + ".prof", std::ios::binary);
+  FILE *file = fopen((input+".prof").c_str(), "rb");
+  int sz;
 
   while (fread(&sz, sizeof(int), 1, file) == 1) {
+    int index_array[sz], count_array[sz];
+    fread(index_array, sizeof(int), sz, file);
+    fread(count_array, sizeof(int), sz, file);
     for (auto i = 0; i < instCount; i++) {
       int edge, weight;
-      fread(&edge, sizeof(int), 1, file);
-      fread(&weight, sizeof(int), 1, file);
+      edge = index_array[i];
+      weight = count_array[i];
+      // fread(&edge, sizeof(int), 1, file);
+      // fread(&weight, sizeof(int), 1, file);
       weights[edge] += weight;
     }
   }
@@ -184,15 +190,22 @@ vi initWeights(string input, int edgeCount, int instCount, bool debug) {
 vvi initWeightsSeparate(string input, int edgeCount, int instCount,
                         bool debug) {
   vvi weights;
-  ifstream prof;
-  string buf;
-  prof.open(input + ".prof");
+  // ifstream prof;
+  // string buf;
+  // prof.open(input + ".prof");
+  FILE *file = fopen((input+".prof").c_str(), "rb");
+  int sz;
 
-  while (prof >> buf) {
+  while (fread(&sz, sizeof(int), 1, file) == 1) {
     vi w(edgeCount, 0);
+    int index_array[sz], count_array[sz];
+    fread(index_array, sizeof(int), sz, file);
+    fread(count_array, sizeof(int), sz, file);
     for (auto i = 0; i < instCount; i++) {
       int edge, weight;
-      prof >> edge >> weight;
+      edge = index_array[i];
+      weight = count_array[i];
+      // prof >> edge >> weight;
       w[edge] = weight;
     }
     weights.push_back(w);
@@ -207,7 +220,8 @@ vvi initWeightsSeparate(string input, int edgeCount, int instCount,
     }
   }
 
-  prof.close();
+  // prof.close();
+  fclose(file);
   return weights;
 }
 

@@ -140,17 +140,26 @@ void initGraph(string input, vs &vertex, vps &edges, si &ST, si &revST, mss &in,
 /// given in the input file.
 vi initWeights(string input, int edgeCount, int instCount, bool debug) {
   vi weights(edgeCount, 0);
-  ifstream prof;
-  string buf;
-  prof.open(input + ".prof");
+  FILE *file = fopen((input+".prof").c_str(), "rb");
+  // ifstream prof;
+  int sz;
+  // prof.open(input + ".prof", std::ios::binary);
 
-  while (prof >> buf) {
+  while (fread(&sz, sizeof(int), 1, file) == 1) {
     for (auto i = 0; i < instCount; i++) {
       int edge, weight;
-      prof >> edge >> weight;
+      fread(&edge, sizeof(int), 1, file);
+      fread(&weight, sizeof(int), 1, file);
       weights[edge] += weight;
     }
   }
+  // while (prof >> sz) {
+  //   for (auto i = 0; i < instCount; i++) {
+  //     int edge, weight;
+  //     prof >> edge >> weight;
+  //     weights[edge] += weight;
+  //   }
+  // }
 
   if (debug) {
     for (auto i : weights) {
@@ -159,7 +168,8 @@ vi initWeights(string input, int edgeCount, int instCount, bool debug) {
     cout << endl;
   }
 
-  prof.close();
+  // prof.close();
+  fclose(file);
   return weights;
 }
 

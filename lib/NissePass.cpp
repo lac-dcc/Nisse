@@ -60,87 +60,145 @@ NissePass::insertEntryFn(Function &F, multiset<Edge> &reverseSTEdges) {
   return pair(counterInst, indexInst);
 }
 
-void NissePass::insertExitFn(llvm::Function &F, llvm::Value *counterInst,
+void NissePass::insertExitFn(llvm::Module &M, llvm::Function &F, llvm::Value *counterInst,
                              llvm::Value *indexInst, int size) {
-  BlockPtr BB = AnalysisUtil::findReturnBlock(F);
-  auto insertion_point = BB->getTerminator();
-  IRBuilder<> builder(insertion_point);
+  BasicBlock &BB = F.back();
+  Instruction *Terminator = BB.getTerminator();
 
-  llvm::Type *r_type = builder.getVoidTy();
+  IRBuilder<> builder(Terminator);
 
-  llvm::SmallVector<llvm::Type *, 5> a_types;
-  llvm::SmallVector<llvm::Value *, 5> a_vals;
+  Type *r_type = builder.getVoidTy();
 
-  a_types.push_back(builder.getPtrTy());
-  llvm::StringRef function_name = insertion_point->getFunction()->getName();
-  a_vals.push_back(builder.CreateGlobalStringPtr(function_name));
+  SmallVector<Type *, 3> a_types;
+  SmallVector<Value *, 3> a_vals;
 
-  a_types.push_back(builder.getInt32Ty());
-  a_vals.push_back(builder.getInt32(function_name.size()));
 
-  a_types.push_back(counterInst->getType());
-  a_vals.push_back(counterInst);
+  a_types.push_back(CounterArray->getType());
+  a_vals.push_back(CounterArray);
 
-  a_types.push_back(indexInst->getType());
-  a_vals.push_back(indexInst);
+  a_types.push_back(IndexArray->getType());
+  a_vals.push_back(IndexArray);
 
   a_types.push_back(builder.getInt32Ty());
   a_vals.push_back(builder.getInt32(size));
 
-  llvm::FunctionType *f_type = llvm::FunctionType::get(r_type, a_types, false);
-  llvm::Module *mod = insertion_point->getModule();
-  llvm::FunctionCallee f_call = mod->getOrInsertFunction("print_data", f_type);
+  FunctionType *f_type = FunctionType::get(r_type, a_types, false);
+  FunctionCallee f_call = M.getOrInsertFunction("nisse_pass_print_data", f_type);
   builder.CreateCall(f_call, a_vals);
 }
 
-PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
-  auto &edges = FAM.getResult<NisseAnalysis>(F);
-  auto &reverseSTEdges = get<2>(edges);
-  int size = reverseSTEdges.size();
+PreservedAnalyses NissePass::run(Module &M, ModuleAnalysisManager &MAM) {
+  LLVMContext &Ctx = M.getContext();
+  FunctionAnalysisManager &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
-  if (size == 1) {
-    errs() << "Function '" << F.getName()
-           << "' has only 1 edge to instrument. Skipping...\n";
-    return PreservedAnalyses::all();
+  outfile.open("info.prof");
+  // Associate function to its number of edges
+  for (Function &F : M) {
+    auto &edges = FAM.getResult<NisseAnalysis>(F);
+    auto &reverseSTEdges = get<2>(edges);
+    int size = reverseSTEdges.size();
+
+    if (size == 1) {
+      errs() << "Function '" << F.getName()
+            << "' has only 1 edge to instrument. Skipping...\n";
+      continue;
+    }
+
+    NumEdges += size;
+    FunctionSize[F.getName().str()] = size;
+    outfile << F.getName().str() << " " << size << "\n";
   }
+  outfile.close();
 
-  auto pInst = this->insertEntryFn(F, reverseSTEdges);
-  auto counterInst = pInst.first;
-  auto indexInst = pInst.second;
+  // Initialize global variables
+  ArrayType *CounterArrayType = ArrayType::get(Type::getInt32Ty(Ctx), NumEdges);
+  CounterArray = new GlobalVariable(
+    M, CounterArrayType, false, GlobalValue::ExternalLinkage,
+    Constant::getNullValue(CounterArrayType), "counter-array"
+  );
 
-  int i = 0;
-  for (auto p : reverseSTEdges) {
-    p.insertIncrFn(i++, counterInst);
+  ArrayType *IndexArrayType = ArrayType::get(Type::getInt32Ty(Ctx), NumEdges);
+  IndexArray = new GlobalVariable(
+    M, IndexArrayType, false, GlobalValue::ExternalLinkage,
+    Constant::getNullValue(IndexArrayType), "index-array"
+  );
+
+  for (Function &F : M) {
+    if (F.isDeclaration()) continue;
+    auto &edges = FAM.getResult<NisseAnalysis>(F);
+    auto &reverseSTEdges = get<2>(edges);
+    int size = reverseSTEdges.size();
+
+    if (size == 1) {
+      if (!DisableProfilePrinting)
+        if (F.getName() == "main")
+          this->insertExitFn(M, F, CounterArray, IndexArray, NumEdges);
+      continue;
+    }
+
+    // Equivalent to InsertEntryFn for IndexArray
+    IRBuilder<> builder(&F.getEntryBlock(), F.getEntryBlock().begin());
+
+    Type *Int32Ty = builder.getInt32Ty();
+
+    int index = Offset;
+    for (auto e : reverseSTEdges) {
+      auto indexCst = builder.getInt32(e.getIndex());
+      Value *indexList[] = {builder.getInt32(index++)};
+
+      auto cast = builder.CreateGEP(Int32Ty, IndexArray, indexList);
+      builder.CreateStore(indexCst, cast);
+    }
+
+    index = Offset;
+    for (auto p : reverseSTEdges) {
+      p.insertIncrFn(index++, CounterArray);
+    }
+
+    if (!DisableProfilePrinting)
+      if (F.getName() == "main")
+        this->insertExitFn(M, F, CounterArray, IndexArray, NumEdges);
+
+    Offset += size;
   }
-
-  if (!DisableProfilePrinting)
-    this->insertExitFn(F, counterInst, indexInst, size);
 
   return PreservedAnalyses::all();
 }
 
-PreservedAnalyses KSPass::run(Function &F, FunctionAnalysisManager &FAM) {
-  auto &edges = FAM.getResult<KSAnalysis>(F);
-  auto &reverseSTEdges = get<2>(edges);
-  int size = reverseSTEdges.size();
+// PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
 
-  if (size == 1) {
-    errs() << "Function '" << F.getName()
-           << "' has only 1 edge to instrument. Skipping...\n";
-    return PreservedAnalyses::all();
+//   return PreservedAnalyses::all();
+// }
+
+PreservedAnalyses KSPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  LLVMContext &Ctx = M.getContext();
+  FunctionAnalysisManager &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  for (Function &F : M) {
+    if (F.isDeclaration()) continue;
+    auto &edges = FAM.getResult<KSAnalysis>(F);
+    auto &reverseSTEdges = get<2>(edges);
+    int size = reverseSTEdges.size();
+
+    if (size == 1) {
+      errs() << "Function '" << F.getName()
+            << "' has only 1 edge to instrument. Skipping...\n";
+      continue;
+    }
+
+    auto pInst = this->insertEntryFn(F, reverseSTEdges);
+    auto counterInst = pInst.first;
+    auto indexInst = pInst.second;
+
+    int i = 0;
+    for (auto p : reverseSTEdges) {
+      p.insertIncrFn(i++, counterInst);
+    }
+
+    if (!DisableProfilePrinting)
+      this->insertExitFn(M, F, counterInst, indexInst, size);
+
   }
-
-  auto pInst = this->insertEntryFn(F, reverseSTEdges);
-  auto counterInst = pInst.first;
-  auto indexInst = pInst.second;
-
-  int i = 0;
-  for (auto p : reverseSTEdges) {
-    p.insertIncrFn(i++, counterInst);
-  }
-
-  if (!DisableProfilePrinting)
-    this->insertExitFn(F, counterInst, indexInst, size);
 
   return PreservedAnalyses::all();
 }

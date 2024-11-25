@@ -372,6 +372,15 @@ struct KSAnalysis : public llvm::AnalysisInfoMixin<KSAnalysis> {
 
 /// \brief Instruments a function for KS edge instrumentation.
 struct KSPass : public NissePass {
+private:
+  llvm::GlobalVariable *CounterArray = nullptr;
+  llvm::GlobalVariable *IndexArray = nullptr;
+  std::map<std::string, int> FunctionSize;
+  int NumEdges = 0;
+  int Offset = 0;
+  std::ofstream outfile;
+
+public:
   /// \brief The transformation pass' run function. Instruments the function
   /// given as argument for KS edge instrumentation.
   /// \param F The function to transform.

@@ -94,6 +94,7 @@ PreservedAnalyses NissePass::run(Module &M, ModuleAnalysisManager &MAM) {
   outfile.open("info.prof");
   // Associate function to its number of edges
   for (Function &F : M) {
+    if (F.isDeclaration()) continue;
     auto &edges = FAM.getResult<NisseAnalysis>(F);
     auto &reverseSTEdges = get<2>(edges);
     int size = reverseSTEdges.size();
@@ -165,15 +166,12 @@ PreservedAnalyses NissePass::run(Module &M, ModuleAnalysisManager &MAM) {
   return PreservedAnalyses::all();
 }
 
-// PreservedAnalyses NissePass::run(Function &F, FunctionAnalysisManager &FAM) {
-
-//   return PreservedAnalyses::all();
-// }
-
 PreservedAnalyses KSPass::run(Module &M, ModuleAnalysisManager &MAM) {
   LLVMContext &Ctx = M.getContext();
   FunctionAnalysisManager &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
+  outfile.open("info.prof");
+  // Associate function to its number of edges
   for (Function &F : M) {
     if (F.isDeclaration()) continue;
     auto &edges = FAM.getResult<KSAnalysis>(F);
@@ -186,18 +184,62 @@ PreservedAnalyses KSPass::run(Module &M, ModuleAnalysisManager &MAM) {
       continue;
     }
 
-    auto pInst = this->insertEntryFn(F, reverseSTEdges);
-    auto counterInst = pInst.first;
-    auto indexInst = pInst.second;
+    NumEdges += size;
+    FunctionSize[F.getName().str()] = size;
+    outfile << F.getName().str() << " " << size << "\n";
+  }
+  outfile.close();
 
-    int i = 0;
+  // Initialize global variables
+  ArrayType *CounterArrayType = ArrayType::get(Type::getInt32Ty(Ctx), NumEdges);
+  CounterArray = new GlobalVariable(
+    M, CounterArrayType, false, GlobalValue::ExternalLinkage,
+    Constant::getNullValue(CounterArrayType), "counter-array"
+  );
+
+  ArrayType *IndexArrayType = ArrayType::get(Type::getInt32Ty(Ctx), NumEdges);
+  IndexArray = new GlobalVariable(
+    M, IndexArrayType, false, GlobalValue::ExternalLinkage,
+    Constant::getNullValue(IndexArrayType), "index-array"
+  );
+
+  for (Function &F : M) {
+    if (F.isDeclaration()) continue;
+    auto &edges = FAM.getResult<KSAnalysis>(F);
+    auto &reverseSTEdges = get<2>(edges);
+    int size = reverseSTEdges.size();
+
+    if (size == 1) {
+      if (!DisableProfilePrinting)
+        if (F.getName() == "main")
+          this->insertExitFn(M, F, CounterArray, IndexArray, NumEdges);
+      continue;
+    }
+
+    // Equivalent to InsertEntryFn for IndexArray
+    IRBuilder<> builder(&F.getEntryBlock(), F.getEntryBlock().begin());
+
+    Type *Int32Ty = builder.getInt32Ty();
+
+    int index = Offset;
+    for (auto e : reverseSTEdges) {
+      auto indexCst = builder.getInt32(e.getIndex());
+      Value *indexList[] = {builder.getInt32(index++)};
+
+      auto cast = builder.CreateGEP(Int32Ty, IndexArray, indexList);
+      builder.CreateStore(indexCst, cast);
+    }
+
+    index = Offset;
     for (auto p : reverseSTEdges) {
-      p.insertIncrFn(i++, counterInst);
+      p.insertIncrFn(index++, CounterArray);
     }
 
     if (!DisableProfilePrinting)
-      this->insertExitFn(M, F, counterInst, indexInst, size);
+      if (F.getName() == "main")
+        this->insertExitFn(M, F, CounterArray, IndexArray, NumEdges);
 
+    Offset += size;
   }
 
   return PreservedAnalyses::all();

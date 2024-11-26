@@ -69,6 +69,7 @@ $LLVM_OPT -S -passes="dot-cfg" -stats \
 
 # Compile the newly instrumented program, and link it against the profiler.
 #
+$LLVM_OPT -S -passes="loop-simplify,break-crit-edges" $LL_NAME -o $LL_NAME
 $LLVM_CLANG -Wall -std=c99 $PF_NAME $PROFILER_IMPL -o $BS_NAME
 ret_code=$?
 if [[ $ret_code -ne 0 ]]; then
@@ -80,7 +81,12 @@ fi
 
 # Run the instrumented binary:
 #
-./$BS_NAME 0
+if [ $# -ge 2 ]
+then
+  ./$BS_NAME $2
+else
+  ./$BS_NAME 0
+fi
 ret_code=$?
 if [ ! -f $INFO_PROF ] || [ ! -f $MAIN_PROF ]
 then

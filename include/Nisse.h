@@ -76,6 +76,12 @@ private:
   /// \return The casted value.
   llvm::Value *createInt32Cast(llvm::Value *inst, llvm::IRBuilder<> &builder);
 
+  /// \brief Casts a value to i64.
+  /// \param inst The value to cast.
+  /// \param builder The builder where to insert the cast.
+  /// \return The casted value.
+  llvm::Value *createInt64Cast(llvm::Value *inst, llvm::IRBuilder<> &builder);
+
   /// \brief Computes the hook to insert the KS counter.
   /// If the source block terminates with an absolute jump, the counter is
   /// placed at the end of that block. If not, it is placed at the start of the

@@ -60,6 +60,7 @@ $LLVM_OPT -S -passes="mem2reg,instnamer" $LL_NAME -o $LL_NAME
 
 # Running the pass:
 #
+$LLVM_OPT -S -passes="loop-simplify,break-crit-edges" $LL_NAME -o $LL_NAME
 $LLVM_OPT -S -load-pass-plugin $MY_LLVM_LIB -passes="nisse" -stats \
     $LL_NAME -o $PF_NAME
 
@@ -81,7 +82,12 @@ fi
 
 # Run the instrumented binary:
 #
-./$BS_NAME 3
+if [ $# -ge 2 ]
+then
+  ./$BS_NAME $2
+else
+  ./$BS_NAME 0
+fi
 ret_code=$?
 if [ ! -f $INFO_PROF ] || [ ! -f $MAIN_PROF ]
 then

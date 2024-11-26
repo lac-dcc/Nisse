@@ -116,7 +116,7 @@ PreservedAnalyses NissePass::run(Module &M, ModuleAnalysisManager &MAM) {
   outfile.close();
 
   // Initialize global variables
-  ArrayType *CounterArrayType = ArrayType::get(Type::getInt32Ty(Ctx), NumEdges);
+  ArrayType *CounterArrayType = ArrayType::get(Type::getInt64Ty(Ctx), NumEdges);
   CounterArray = new GlobalVariable(
     M, CounterArrayType, false, GlobalValue::ExternalLinkage,
     Constant::getNullValue(CounterArrayType), "counter-array"
@@ -195,7 +195,7 @@ PreservedAnalyses KSPass::run(Module &M, ModuleAnalysisManager &MAM) {
   outfile.close();
 
   // Initialize global variables
-  ArrayType *CounterArrayType = ArrayType::get(Type::getInt32Ty(Ctx), NumEdges);
+  ArrayType *CounterArrayType = ArrayType::get(Type::getInt64Ty(Ctx), NumEdges);
   CounterArray = new GlobalVariable(
     M, CounterArrayType, false, GlobalValue::ExternalLinkage,
     Constant::getNullValue(CounterArrayType), "counter-array"

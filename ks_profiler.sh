@@ -31,6 +31,9 @@ BS_NAME=$(basename $FL_NAME .c)
 PROF_DIR=$FL_NAME.profiling
 LL_NAME="$BS_NAME.ll"
 PF_NAME="$BS_NAME.profiled.ll"
+INFO_PROF="info.prof"
+MAIN_PROF="main.prof"
+PROF_SUF=".prof.full"
 
 
 # Create the profiling folder:
@@ -65,7 +68,6 @@ $LLVM_OPT -S -passes="dot-cfg" -stats \
     $PF_NAME -o $PF_NAME
 
 # Compile the newly instrumented program, and link it against the profiler.
-# We are passing -no_pie to disable address space layout randomization:
 #
 $LLVM_CLANG -Wall -std=c99 $PF_NAME $PROFILER_IMPL -o $BS_NAME
 ret_code=$?
@@ -79,28 +81,22 @@ fi
 # Run the instrumented binary:
 #
 ./$BS_NAME 0
-
-# Prepare the result folders
-#
-mkdir graphs profiles compiled partial_profiles dot
-
-# Propagation Flags to use:
-#
-if [ $# -eq 2 ]
+ret_code=$?
+if [ ! -f $INFO_PROF ] || [ ! -f $MAIN_PROF ]
 then
-  PROP_FLAG="-s"
-else
-  PROP_FLAG=""
+  echo "Execution failed"
+  cd -
+  echo $FL_NAME >> err.txt
+  exit $ret_code
 fi
 
 # Propagate the weights for each function:
 #
-for i in *.prof; do
-  PROF_NAME="$i.full"
-  $PROP_BIN $i $PROP_FLAG -o $PROF_NAME
-  mv $i partial_profiles/
-  mv $PROF_NAME profiles/
-done
+$PROP_BIN $INFO_PROF $MAIN_PROF -o ".prof.full"
+
+# Prepare the result folders
+#
+mkdir graphs profiles compiled partial_profiles dot
 
 # Move the files to apropriate folders
 #
@@ -114,6 +110,14 @@ done
 
 for i in *.ll; do
   mv $i compiled/
+done
+
+for i in *.prof.full*; do
+  mv $i profiles/
+done
+
+for i in *.prof; do
+  mv $i partial_profiles/
 done
 
 mv $BS_NAME compiled/

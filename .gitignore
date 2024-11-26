@@ -4,3 +4,6 @@ rapport/*
 res/*
 res2/*
 err.txt
+.idea
+.vscode
+example

@@ -31,16 +31,22 @@
 using namespace std;
 using namespace llvm;
 
-/// \brief Shorthand for vector of int.
-using vi = vector<int>;
-/// \brief Shorthand for vector of vector of int.
+/// \brief Shorthand for long long int
+using ll = long long int;
+/// \brief Shorthand for vector of long long int.
+using vi = vector<ll>;
+/// \brief Shorthand for vector of vector of long long int.
 using vvi = vector<vi>;
-/// \brief Shorthand for vector of pairs of int.
-using vpi = vector<pair<int, int>>;
-/// \brief Shorthand for set of int.
-using si = set<int>;
-/// \brief Shorthand for map from int to set of int.
-using msi = map<int, si>;
+/// \brief Shorthand for vector of pairs of long long int.
+using vpi = vector<pair<ll, ll>>;
+/// \brief Shorthand for set of long long int.
+using si = set<ll>;
+/// \brief Shorthand for map from int to set of long long int.
+using msi = map<ll, si>;
+
+using vs = vector<string>;
+using mss = map<string, si>;
+using vps = vector<pair<string, string>>;
 
 /// \brief Initialises the variables given as input with the graph described by
 /// the file input.
@@ -52,8 +58,8 @@ using msi = map<int, si>;
 /// \param in in[x] contains the edges towards x.
 /// \param out out[x] contains the edges from x.
 /// \param debug Flag for the debug messages.
-void initGraph(string input, vi &vertex, vpi &edges, si &ST, si &revST, msi &in,
-               msi &out, bool debug) {
+void initGraph(string input, vs &vertex, vps &edges, si &ST, si &revST, mss &in,
+               mss &out, bool debug) {
   int count;
   ifstream graph;
   graph.open(input + ".graph");
@@ -63,7 +69,7 @@ void initGraph(string input, vi &vertex, vpi &edges, si &ST, si &revST, msi &in,
     cout << count << endl;
 
   for (int i = 0; i < count; i++) {
-    int tmp;
+    string tmp;
     graph >> tmp;
     vertex.push_back(tmp);
     in[tmp] = si();
@@ -78,13 +84,14 @@ void initGraph(string input, vi &vertex, vpi &edges, si &ST, si &revST, msi &in,
   }
 
   graph >> count;
-  edges = vpi(count);
+  edges = vps(count);
   for (int i = 0; i < count; i++) {
-    int j, a, b;
+    int j;
+    string a, b;
     graph >> j >> a >> b;
-    edges.at(j) = pair(a, b);
-    out.at(a).insert(j);
-    in.at(b).insert(j);
+    edges[j] = make_pair(a, b);
+    out[a].insert(j);
+    in[b].insert(j);
   }
 
   if (debug) {
@@ -133,18 +140,10 @@ void initGraph(string input, vi &vertex, vpi &edges, si &ST, si &revST, msi &in,
 /// \param debug Flag for the debug messages.
 /// \return The weights of the edges, initialized at 0, or at the total value
 /// given in the input file.
-vi initWeights(string input, int edgeCount, int instCount, bool debug) {
+vi initWeights(string input, vpi &prof, int edgeCount, int instCount, bool debug) {
   vi weights(edgeCount, 0);
-  ifstream prof;
-  string buf;
-  prof.open(input + ".prof");
-
-  while (prof >> buf) {
-    for (auto i = 0; i < instCount; i++) {
-      int edge, weight;
-      prof >> edge >> weight;
-      weights.at(edge) += weight;
-    }
+  for (auto [edge, weight] : prof) {
+    weights[edge] = weight;
   }
 
   if (debug) {
@@ -154,45 +153,6 @@ vi initWeights(string input, int edgeCount, int instCount, bool debug) {
     cout << endl;
   }
 
-  prof.close();
-  return weights;
-}
-
-/// \brief Initialises the edge weights based on the input file. If there are
-/// multiple profilings, will sum create a separate set of weights for each.
-/// \param input Path to the input file.
-/// \param edgeCount Number of edges in the graph.
-/// \param instCount Number of instrumented edges.
-/// \param debug Flag for the debug messages.
-/// \return The weights of the edges, initialized at 0, or at the values given
-/// in the input file.
-vvi initWeightsSeparate(string input, int edgeCount, int instCount,
-                        bool debug) {
-  vvi weights;
-  ifstream prof;
-  string buf;
-  prof.open(input + ".prof");
-
-  while (prof >> buf) {
-    vi w(edgeCount, 0);
-    for (auto i = 0; i < instCount; i++) {
-      int edge, weight;
-      prof >> edge >> weight;
-      w.at(edge) = weight;
-    }
-    weights.push_back(w);
-  }
-
-  if (debug) {
-    for (auto w : weights) {
-      for (auto i : w) {
-        cout << i << " ";
-      }
-      cout << endl;
-    }
-  }
-
-  prof.close();
   return weights;
 }
 
@@ -205,37 +165,37 @@ vvi initWeightsSeparate(string input, int edgeCount, int instCount,
 /// \param v The vertex to propagate from.
 /// \param e The edge to propagate from (not used on the initial call to the
 /// function).
-void propagation(vpi &edges, si &ST, msi &in, msi &out, vi &weights, int v,
+void propagation(vps &edges, si &ST, mss &in, mss &out, vi &weights, string v,
                  int e = -1) {
-  int in_sum = 0;
-  for (auto ep : in.at(v)) {
+  ll in_sum = 0;
+  for (auto ep : in[v]) {
     if (ep != e && ST.count(ep) == 1) {
-      propagation(edges, ST, in, out, weights, edges.at(ep).first, ep);
+      propagation(edges, ST, in, out, weights, edges[ep].first, ep);
     }
-    in_sum += weights.at(ep);
+    in_sum += weights[ep];
   }
 
-  int out_sum = 0;
-  for (auto ep : out.at(v)) {
+  ll out_sum = 0;
+  for (auto ep : out[v]) {
     if (ep != e && ST.count(ep) == 1) {
-      propagation(edges, ST, in, out, weights, edges.at(ep).second, ep);
+      propagation(edges, ST, in, out, weights, edges[ep].second, ep);
     }
-    out_sum += weights.at(ep);
+    out_sum += weights[ep];
   }
 
   if (e != -1) {
-    weights.at(e) = max(in_sum, out_sum) - min(in_sum, out_sum);
+    weights[e] = max(in_sum, out_sum) - min(in_sum, out_sum);
   }
 }
 
 /// \brief Outputs the weights of the edges to the standard output.
 /// \param edges The graph's edges.
 /// \param weights The edge's weights.
-void outputCout(vpi &edges, vi &weights) {
+void outputCout(vps &edges, vi &weights) {
   int size = edges.size();
   for (int i = 0; i < size; i++) {
-    cout << edges.at(i).first << " -> " << edges.at(i).second << " : "
-         << weights.at(i) << '\n';
+    cout << edges[i].first << " -> " << edges[i].second << " : "
+         << weights[i] << '\n';
   }
   cout << endl;
 }
@@ -244,23 +204,43 @@ void outputCout(vpi &edges, vi &weights) {
 /// \param filename The path to the file to write the results.
 /// \param edges The graph's edges.
 /// \param weights The edge's weights.
-void outputFile(string filename, vpi &edges, vi &weights) {
-  ofstream file;
-  file.open(filename, ios::out | ios::app);
+void outputFile(string filename, vps &edges, vi &weights) {
+  ofstream file, bbFile;
+  file.open(filename+".edges", ios::out | ios::app);
 
   if (file.bad()) {
-    cout << "Could not open file " << filename << endl;
+    cout << "Could not open file " << filename+".edges" << endl;
     outputCout(edges, weights);
   }
 
   int size = edges.size();
   for (int i = 0; i < size; i++) {
-    file << edges.at(i).first << " -> " << edges.at(i).second << " : "
-         << weights.at(i) << '\n';
+    file << edges[i].first << " -> " << edges[i].second << " : "
+         << weights[i] << '\n';
   }
 
   file << endl;
   file.close();
+
+  bbFile.open(filename+".bb", ios::out | ios::app);
+
+  if (bbFile.bad()) {
+    cout << "Could not open file " << filename+".bb" << endl;
+    outputCout(edges, weights);
+  }
+
+  map<string,ll> bbFrequency;
+  for (int i = 0; i < size; i++) {
+    // if (edges[i].first == "0") bbFrequency["0"] += weights[i];
+    bbFrequency[edges[i].second] += weights[i];
+  }
+
+  for (auto [bb, freq] : bbFrequency) {
+    bbFile << bb << " : " << freq << '\n';
+  }
+
+  bbFile << endl;
+  bbFile.close();
 }
 
 /// \brief Propagates the weights given by edge instrumentation. If the graph is
@@ -270,67 +250,93 @@ void outputFile(string filename, vpi &edges, vi &weights) {
 /// \param argv (⊙ˍ⊙)
 /// \return 0
 int main(int argc, char **argv) {
-  cl::opt<string> InputFilename(cl::Positional, cl::desc("<input file>"),
+  cl::opt<string> InfoFilename(cl::Positional, cl::desc("<info file>"),
                                 cl::Required);
-  cl::opt<string> OutputFilename("o", cl::desc("Specify output filename"),
-                                 cl::value_desc("filename"));
+  cl::opt<string> ProfFilename(cl::Positional, cl::desc("<prof file>"),
+                                cl::Required);
+  cl::opt<string> OutputExtension("o", cl::desc("Specify output extension"),
+                                 cl::value_desc("extension"));
   cl::opt<bool> Debug("d", cl::desc("Enable debug messages"));
   cl::opt<bool> Separate(
       "s", cl::desc("Do separate profilings for each function execution"));
 
   cl::ParseCommandLineOptions(argc, argv);
-  vi vertex;
-  vpi edges;
-  si ST, revST;
-  msi in, out;
-  vvi weights;
-
-  int period = InputFilename.find_last_of('.');
-  int slash = InputFilename.find_last_of('/');
-  string input;
-  if (period > slash) {
-    input = InputFilename.substr(0, period);
-  } else {
-    input = InputFilename.getValue();
+  vector<string> functions;
+  map<string, int> functionSizes;
+  map<string, vpi> functionProfiles;
+  
+  {
+    ifstream info_file;
+    info_file.open(InfoFilename);
+    string function_name;
+    int sz;
+    while (info_file >> function_name >> sz) {
+      functions.emplace_back(function_name);
+      functionSizes[function_name] = sz;
+    }
+    info_file.close();
   }
 
-  if (Debug) {
-    cout << "\nComputing the graph of " << input << "\n\n";
-  }
 
-  initGraph(input, vertex, edges, ST, revST, in, out, Debug);
-
-  if (Debug) {
-    cout << "\nComputing the input weights\n\n";
-  }
-
-  if (Separate) {
-    weights = initWeightsSeparate(input, edges.size(), revST.size(), Debug);
-  } else {
-    weights.push_back(initWeights(input, edges.size(), revST.size(), Debug));
-  }
-
-  if (Debug) {
-    cout << "\nPropagating the weights\n\n";
-  }
-  bool to_print = true;
-  for (auto w : weights) {
-    propagation(edges, ST, in, out, w, 0);
-
-    if (OutputFilename.size() > 0) {
-      if (to_print) {
-        cout << "Writing '" << OutputFilename << "'...\n";
-        to_print = false;
+  {
+    ifstream prof_file;
+    prof_file.open(ProfFilename);
+    for (auto function_name : functions) {
+      auto sz = functionSizes[function_name];
+      functionProfiles[function_name] = {};
+      while (sz--) {
+        ll idx, count;
+        prof_file >> idx >> count;
+        functionProfiles[function_name].emplace_back(idx, count);
       }
-      outputFile(OutputFilename, edges, w);
-    } else {
-      if (to_print) {
-        cout << "Printing the weights of '" << input << "'...\n";
-        to_print = false;
+    }
+    prof_file.close();
+  }
+
+  for (auto function_name : functions) {
+    auto prof = functionProfiles[function_name];
+
+    vs vertex;
+    vps edges;
+    si ST, revST;
+    mss in, out;
+    vvi weights;
+
+    if (Debug) {
+      cout << "\nComputing the graph of " << function_name << "\n\n";
+    }
+
+    initGraph(function_name, vertex, edges, ST, revST, in, out, Debug);
+
+    if (Debug) {
+      cout << "\nComputing the input weights\n\n";
+    }
+
+    weights.push_back(initWeights(function_name, prof, edges.size(), revST.size(), Debug));
+
+    if (Debug) {
+      cout << "\nPropagating the weights\n\n";
+    }
+    bool to_print = true;
+    for (auto w : weights) {
+      propagation(edges, ST, in, out, w, "0");
+
+      if (OutputExtension.size() > 0) {
+        if (to_print) {
+          cout << "Writing '" << function_name << OutputExtension << "'... and\n";
+          to_print = false;
+        }
+        outputFile(function_name + OutputExtension, edges, w);
+      } else {
+        if (to_print) {
+          cout << "Printing the weights of '" << function_name << "'...\n";
+          to_print = false;
+        }
+        outputCout(edges, w);
       }
-      outputCout(edges, w);
     }
   }
+
 
   return 0;
 }

@@ -41,20 +41,16 @@ void registerAnalyses(FunctionAnalysisManager &FAM) {
 ///
 /// \returns true if \p Name corresponds to any of the passes implemented;
 /// otherwise, returns false.
-bool registerPipeline(StringRef Name, FunctionPassManager &FPM,
+bool registerPipeline(StringRef Name, ModulePassManager &MPM,
                       ArrayRef<PassBuilder::PipelineElement>) {
 
   if (Name == "nisse") {
-    FPM.addPass(LoopSimplifyPass());
-    FPM.addPass(BreakCriticalEdgesPass());
-    FPM.addPass(nisse::NissePass());
+    MPM.addPass(nisse::NissePass());
     return true;
   }
 
   if (Name == "ks") {
-    FPM.addPass(LoopSimplifyPass());
-    FPM.addPass(BreakCriticalEdgesPass());
-    FPM.addPass(nisse::KSPass());
+    MPM.addPass(nisse::KSPass());
     return true;
   }
 

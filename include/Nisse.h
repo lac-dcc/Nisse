@@ -31,6 +31,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PassManager.h"
 #include <map>
+#include <fstream>
 
 namespace nisse {
 
@@ -74,6 +75,12 @@ private:
   /// \param builder The builder where to insert the cast.
   /// \return The casted value.
   llvm::Value *createInt32Cast(llvm::Value *inst, llvm::IRBuilder<> &builder);
+
+  /// \brief Casts a value to i64.
+  /// \param inst The value to cast.
+  /// \param builder The builder where to insert the cast.
+  /// \return The casted value.
+  llvm::Value *createInt64Cast(llvm::Value *inst, llvm::IRBuilder<> &builder);
 
   /// \brief Computes the hook to insert the KS counter.
   /// If the source block terminates with an absolute jump, the counter is
@@ -315,6 +322,14 @@ public:
 ///
 /// \brief Instruments a function for edge instrumentation.
 struct NissePass : public llvm::PassInfoMixin<NissePass> {
+private:
+  llvm::GlobalVariable *CounterArray = nullptr;
+  llvm::GlobalVariable *IndexArray = nullptr;
+  std::map<std::string, int> FunctionSize;
+  int NumEdges = 0;
+  int Offset = 0;
+  std::ofstream outfile;
+
 protected:
   /// \brief Inserts the initialization code, which creates a
   /// 0-initialized array of ints of size size.
@@ -330,7 +345,7 @@ protected:
   /// \param counterInst The instruction pointer to the counter array.
   /// \param indexInst The instruction pointer to the index array.
   /// \param size The size of the counter and index arrays.
-  void insertExitFn(llvm::Function &F, llvm::Value *counterInst,
+  void insertExitFn(llvm::Module &M, llvm::Function &F, llvm::Value *counterInst,
                     llvm::Value *indexInst, int size);
 
 public:
@@ -338,8 +353,8 @@ public:
   /// given as argument for KS edge instrumentation.
   /// \param F The function to transform.
   /// \param FAM The current FunctionAnalysisManager.
-  llvm::PreservedAnalyses run(llvm::Function &F,
-                              llvm::FunctionAnalysisManager &FAM);
+  llvm::PreservedAnalyses run(llvm::Module &F,
+                              llvm::ModuleAnalysisManager &FAM);
 };
 
 /// \brief Computes the maximum spanning tree of a function's CFG
@@ -363,12 +378,21 @@ struct KSAnalysis : public llvm::AnalysisInfoMixin<KSAnalysis> {
 
 /// \brief Instruments a function for KS edge instrumentation.
 struct KSPass : public NissePass {
+private:
+  llvm::GlobalVariable *CounterArray = nullptr;
+  llvm::GlobalVariable *IndexArray = nullptr;
+  std::map<std::string, int> FunctionSize;
+  int NumEdges = 0;
+  int Offset = 0;
+  std::ofstream outfile;
+
+public:
   /// \brief The transformation pass' run function. Instruments the function
   /// given as argument for KS edge instrumentation.
   /// \param F The function to transform.
   /// \param FAM The current FunctionAnalysisManager.
-  llvm::PreservedAnalyses run(llvm::Function &F,
-                              llvm::FunctionAnalysisManager &FAM);
+  llvm::PreservedAnalyses run(llvm::Module &M,
+                              llvm::ModuleAnalysisManager &MAM);
 };
 
 } // namespace nisse

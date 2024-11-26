@@ -62,12 +62,9 @@ NissePass::insertEntryFn(Function &F, multiset<Edge> &reverseSTEdges) {
 
 void NissePass::insertExitFn(llvm::Module &M, llvm::Function &F, llvm::Value *counterInst,
                              llvm::Value *indexInst, int size) {
-  BasicBlock &BB = F.back();
-  Instruction *Terminator = BB.getTerminator();
+  LLVMContext &Ctx = M.getContext();
 
-  IRBuilder<> builder(Terminator);
-
-  Type *r_type = builder.getVoidTy();
+  Type *r_type = Type::getVoidTy(Ctx);
 
   SmallVector<Type *, 3> a_types;
   SmallVector<Value *, 3> a_vals;
@@ -79,12 +76,19 @@ void NissePass::insertExitFn(llvm::Module &M, llvm::Function &F, llvm::Value *co
   a_types.push_back(IndexArray->getType());
   a_vals.push_back(IndexArray);
 
-  a_types.push_back(builder.getInt32Ty());
-  a_vals.push_back(builder.getInt32(size));
+  a_types.push_back(Type::getInt32Ty(Ctx));
+  a_vals.push_back(ConstantInt::get(Type::getInt32Ty(Ctx), size));
 
   FunctionType *f_type = FunctionType::get(r_type, a_types, false);
   FunctionCallee f_call = M.getOrInsertFunction("nisse_pass_print_data", f_type);
-  builder.CreateCall(f_call, a_vals);
+
+  for (BasicBlock &BB : F) {
+    Instruction *Terminator = BB.getTerminator();
+    if (isa<ReturnInst>(Terminator)) {
+      IRBuilder<> builder(Terminator);
+      builder.CreateCall(f_call, a_vals);
+    }
+  }
 }
 
 PreservedAnalyses NissePass::run(Module &M, ModuleAnalysisManager &MAM) {

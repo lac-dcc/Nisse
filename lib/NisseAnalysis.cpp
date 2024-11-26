@@ -270,6 +270,7 @@ void NisseAnalysis::identifyWellFoundedEdges(Loop *L, ScalarEvolution &SE,
   SmallVector<BlockPtr> exitBlocks;
   L->getExitBlocks(exitBlocks);
   auto firstBlock = incomingBlock->getSingleSuccessor();
+  if (firstBlock == nullptr) return;
   Edge backEdge(backBlock, firstBlock, -1);
   for (auto &PHI : firstBlock->phis()) {
     if (identifyInductionVariable(SE, edges, &PHI, incomingBlock, backBlock,

@@ -66,11 +66,11 @@ Instruction *Edge::getInstrumentationPoint() const {
 void Edge::insertSimpleIncrFn(int i, Value *inst) {
   auto instruction = this->getInstrumentationPoint();
   IRBuilder<> builder(instruction);
-  auto *I = builder.getInt32Ty();
-  Value *indexList[] = {builder.getInt32(i)};
-  Value *incr = builder.getInt32(1);
-  auto inst1 = builder.CreateGEP(I, inst, indexList);
-  auto inst2 = builder.CreateLoad(I, inst1);
+  auto *L = builder.getInt64Ty();
+  Value *indexList[] = {builder.getInt64(i)};
+  Value *incr = builder.getInt64(1);
+  auto inst1 = builder.CreateGEP(L, inst, indexList);
+  auto inst2 = builder.CreateLoad(L, inst1);
   auto inst3 = builder.CreateAdd(inst2, incr);
   builder.CreateStore(inst3, inst1);
 }
@@ -89,19 +89,33 @@ Value *Edge::createInt32Cast(llvm::Value *inst, IRBuilder<> &builder) {
   return inst;
 }
 
+Value *Edge::createInt64Cast(llvm::Value *inst, IRBuilder<> &builder) {
+  Type *int64Ty = builder.getInt64Ty();
+  auto ty = inst->getType();
+  if (ty == int64Ty)
+    return inst;
+  if (ty->isIntegerTy()) {
+    return builder.CreateIntCast(inst, int64Ty, true);
+  }
+  if (ty->isPointerTy()) {
+    return builder.CreatePtrToInt(inst, int64Ty);
+  }
+  return inst;
+}
+
 void Edge::insertSESEIncrFn(int i, Value *inst) {
   for (auto block : this->exitBlocks) {
     Instruction *instruction = &*block->getFirstInsertionPt();
     IRBuilder<> builder(instruction);
-    Type *int32Ty = builder.getInt32Ty();
-    Value *indexList[] = {builder.getInt32(i)};
+    Type *int64Ty = builder.getInt64Ty();
+    Value *indexList[] = {builder.getInt64(i)};
 
-    auto incrValueCst = builder.getInt32(this->incrValue);
+    auto incrValueCst = builder.getInt64(this->incrValue);
 
-    auto inst1 = builder.CreateGEP(int32Ty, inst, indexList);
-    auto inst = builder.CreateLoad(int32Ty, inst1);
-    auto indVarCast = this->createInt32Cast(indVar, builder);
-    auto initValueCast = this->createInt32Cast(initValue, builder);
+    auto inst1 = builder.CreateGEP(int64Ty, inst, indexList);
+    auto inst = builder.CreateLoad(int64Ty, inst1);
+    auto indVarCast = this->createInt64Cast(indVar, builder);
+    auto initValueCast = this->createInt64Cast(initValue, builder);
     Value *incr;
     switch ((int)incrValue) {
     case 1:
@@ -115,7 +129,7 @@ void Edge::insertSESEIncrFn(int i, Value *inst) {
     default:
       auto inst3 = builder.CreateSub(indVarCast, initValueCast);
       auto incr0 = builder.CreateSDiv(inst3, incrValueCst);
-      incr = builder.CreateIntCast(incr0, builder.getInt32Ty(), true);
+      incr = builder.CreateIntCast(incr0, builder.getInt64Ty(), true);
       break;
     }
 
@@ -155,20 +169,12 @@ bool Edge::operator>(const Edge &e) const {
 bool Edge::compareWeights(const Edge &a, const Edge &b) { return b < a; }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Edge &e) {
-  // if (!e.getOrigin()->hasName())
-  //   e.setOriginName();
-  // if (!e.getDest()->hasName())
-  //   e.setDestName();
   os << e.getName() << " : " << e.getOrigin()->getName() << " -> "
      << e.getDest()->getName();
   return os;
 }
 
 std::ostream &operator<<(std::ostream &os, const Edge &e) {
-  // if (!e.getOrigin()->hasName())
-  //   e.setOriginName();
-  // if (!e.getDest()->hasName())
-  //   e.setDestName();
   os << to_string(e.getIndex()) << string(" ")
      << AnalysisUtil::removebb(e.getOrigin()->getName().str()) << string(" ")
      << AnalysisUtil::removebb(e.getDest()->getName().str());

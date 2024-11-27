@@ -36,11 +36,11 @@ LLVM_INSTALL_DIR is the path to the build directory of llvm.
 SOURCE_DIR is the path to this folder.
 
 This basic command will create a folder `file.c.profiling`.
-In that folder are 5 subfolders:
+In that folder there are 5 subfolders:
 * `compiled` contains 3 files:
-  *  `file.ll` an IR file modified by the following LLVM passes: mem2reg, instnamer, loop-simplify and break-crit-edges.
-  *  `file.profiled.ll` an IR file instrumented with KS counters.
-  *  `file` an executable file compiled from `file.profiled.ll`.
+  *  `file.ll`: an IR file modified by the following LLVM passes: mem2reg, instnamer, loop-simplify and break-crit-edges.
+  *  `file.profiled.ll`: an IR file instrumented with KS counters.
+  *  `file`: an executable file compiled from `file.profiled.ll`.
 * `profiles` contains the complete profile for each function. The profile will contain the total execution for each function, having the execution for each edge and each basic block of the function.
 * `partial_profiles` contains the profile data obtained for every function in one file, along with a file with the number of edges for each function.
 * `graphs` contains the vertices, edges, spanning tree and instrumented edges of each function's CFG.

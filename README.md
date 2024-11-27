@@ -38,11 +38,11 @@ SOURCE_DIR is the path to this folder.
 This basic command will create a folder `file.c.profiling`.
 In that folder are 5 subfolders:
 * `compiled` contains 3 files:
-  *  `file.ll` an IR file modified by the following LLVM passes: mem2reg, and instnamer.
+  *  `file.ll` an IR file modified by the following LLVM passes: mem2reg, instnamer, loop-simplify and break-crit-edges.
   *  `file.profiled.ll` an IR file instrumented with KS counters.
   *  `file` an executable file compiled from `file.profiled.ll`.
-* `profiles` contains the complete profile for each function. By default, if a function is called multiple times, the profile will contain the total execution. Adding an an extra argument to the `nisse_profiler.sh` script generates a separate profile for each execution instead.
-* `partial_profiles` contains the profile data obtained by the instrumentation for each function.
+* `profiles` contains the complete profile for each function. The profile will contain the total execution for each function, having the execution for each edge and each basic block of the function.
+* `partial_profiles` contains the profile data obtained for every function in one file, along with a file with the number of edges for each function.
 * `graphs` contains the vertices, edges, spanning tree and instrumented edges of each function's CFG.
 * `dot` contains a `dot` file with the representation of each function's CFG.
 

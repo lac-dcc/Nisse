@@ -67,14 +67,15 @@ string AnalysisUtil::removebb(const string &s) {
   if (pos == string::npos) {
     return (s.size() == 2 ? "0" : s.substr(2));
   } else {
-    string bb1 = s.substr(0,pos);
+    string bb1 = s.substr(0,pos), bb2, args, aux;
     bb1 = (bb1.size() == 2 ? "0" : bb1.substr(2));
-    string aux = s.substr(pos+1);
+    aux = s.substr(pos+1);
     if (aux == "loopexit") {
       return bb1+".le";
     }
     pos = aux.find("_");
-    string bb2 = aux.substr(0,pos), args = aux.substr(pos+1);
+    bb2 = aux.substr(0,pos);
+    args = aux.substr(pos+1);
     bb2 = (bb2.size() == 2 ? "0" : bb2.substr(2));
     if (args == "crit_edge") {
       return bb1+"_"+bb2+".ce";
@@ -167,13 +168,18 @@ bool NisseAnalysis::identifyInductionVariable(
     return false;
   const APInt *IncrementValue = &IncrementSCEVCst->getValue()->getValue();
   auto val = PHI->getIncomingValueForBlock(incomingBlock);
-  for (auto &e : edges) {
-    if (e == backEdge) {
-      edges.erase(e);
-      Edge new_e = e;
-      new_e.setSESE(IndVar, val, IncrementValue, exitBlocks);
-      edges.insert(new_e);
+  for (auto it = edges.begin(); it != edges.end(); ) {
+    if (*it == backEdge) {
+      Edge oldEdge = *it;
+      it = edges.erase(it);
+
+      Edge newEdge = oldEdge;
+      newEdge.setSESE(IndVar, val, IncrementValue, exitBlocks);
+      edges.insert(newEdge);
+
       return true;
+    } else {
+      ++it;
     }
   }
   return false;

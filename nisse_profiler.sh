@@ -129,6 +129,8 @@ done
 
 mv $BS_NAME compiled/
 
+python3 "$SOURCE_DIR/modify_dot.py" "."
+
 # Go back to the folder where you were before:
 #
 cd -

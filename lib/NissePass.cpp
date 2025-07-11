@@ -134,6 +134,13 @@ PreservedAnalyses NissePass::run(Module &M, ModuleAnalysisManager &MAM) {
     auto &reverseSTEdges = get<2>(edges);
     int size = reverseSTEdges.size();
 
+    // if (F.getName() == "main") {
+    //   IRBuilder<> mainBuilder(&F.getEntryBlock(), F.getEntryBlock().begin());
+    //   auto cast = mainBuilder.CreateGEP(mainBuilder.getInt64Ty(), CounterArray, {mainBuilder.getInt64(0)});
+    //   auto zero = mainBuilder.getInt64(0);
+    //   mainBuilder.CreateMemSet(cast, zero, NumEdges * sizeof(int64_t), CounterArray->getAlign());
+    // }
+
     if (size == 1) {
       if (!DisableProfilePrinting)
         if (F.getName() == "main")

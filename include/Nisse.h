@@ -51,14 +51,10 @@ private:
 
   bool flagSESE; ///< Flag to use if the edge is instrumenting a SESE region.
 
-  llvm::Value *indVar;
-  ///< User defined induction variable (for well-founded loops).
-  llvm::Value *initValue;
-  ///< User defined initial value (for well-founded loops).
-  double incrValue;
-  ///< User defined increment value (for well-founded loops).
-  llvm::SmallVector<BlockPtr> exitBlocks;
-  ///< List of exit blocks (for well-founded loops).
+  llvm::Value *indVar; ///< User defined induction variable (for well-founded loops).
+  llvm::Value *initValue; ///< User defined initial value (for well-founded loops).
+  double incrValue; ///< User defined increment value (for well-founded loops).
+  llvm::SmallVector<BlockPtr> exitBlocks; ///< List of exit blocks (for well-founded loops).
 
   /// \brief Instruments the edge with an increment counter.
   /// \param i The index of the array to increment.

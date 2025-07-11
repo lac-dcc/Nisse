@@ -72,6 +72,8 @@ string AnalysisUtil::removebb(const string &s) {
     aux = s.substr(pos+1);
     if (aux == "loopexit") {
       return bb1+".le";
+    } else if (aux == "preheader") {
+      return bb1+".ph";
     }
     pos = aux.find("_");
     bb2 = aux.substr(0,pos);

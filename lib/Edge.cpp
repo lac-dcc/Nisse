@@ -21,6 +21,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Nisse.h"
+#include <iostream>
 
 using namespace llvm;
 using namespace std;
